@@ -95,9 +95,9 @@
           <div class="status-indicator-dot" id="sidebar-indicator-dot"></div>
           <span class="status-text" id="sidebar-status-text">Checking connection...</span>
         </div>
-        <button id="btn-logout" class="btn btn-outline btn-block btn-sm">
-          <i data-lucide="log-out" class="btn-icon-left"></i>
-          <span>Logout</span>
+        <button id="btn-sidebar-settings" class="btn btn-outline btn-block btn-sm" style="margin-top: 0.5rem;">
+          <i data-lucide="key-round" class="btn-icon-left"></i>
+          <span>Account Connection</span>
         </button>
       </div>
     </aside>
@@ -204,10 +204,32 @@
       <section id="view-selective-content" class="view-pane hidden">
         
         <!-- Filter Criteria Panel -->
-        <div class="glass-panel card p-md mb-md">
+        <div class="glass-panel card p-md mb-md" id="selective-filter-card">
           <h3>Selective Deletion Filters</h3>
           <p class="text-secondary">Search for specific file patterns and categories to perform bulk trashing.</p>
+        </div>
 
+        <!-- SELECTIVE PROGRESS CARD -->
+        <div id="selective-progress-card" class="glass-panel card p-lg text-center hidden" style="margin-bottom: 1.5rem;">
+          <div class="spinner-wrapper">
+            <div class="double-bounce-spinner"></div>
+            <i data-lucide="search" class="spinner-center-icon"></i>
+          </div>
+          <h3>Searching Matching Files...</h3>
+          <p class="text-secondary">Scanning Google Drive storage</p>
+
+          <div class="progress-container max-width-sm mx-auto my-md">
+            <div class="progress-bar-track">
+              <div id="selective-progress-bar" class="progress-bar-fill animated-pulse" style="width: 5%"></div>
+            </div>
+            <div class="progress-stats-row text-secondary">
+              <span id="selective-stat-files">Scanned: 0 files</span>
+              <span id="selective-stat-folders">Cached: 0 folders</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-panel card p-md mb-md">
           <form id="selective-filter-form" class="selective-grid">
             <div class="form-group">
               <label for="selective-names">File Name Patterns</label>

@@ -106,7 +106,7 @@ def is_token_present() -> bool:
     return os.path.exists(gdrive_dedup.TOKEN_FILE)
 
 # -- Background Scan Task (Real Mode) ----------------------------------------
-def bg_scan_real(include_shared: bool):
+def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types_filter: Optional[str] = None):
     global scanned_files_cache, folder_cache_global
     scan_state["status"] = "scanning"
     scan_state["progress"] = {"scanned_count": 0, "page_num": 0, "folders_cached": 0}
@@ -132,43 +132,67 @@ def bg_scan_real(include_shared: bool):
         scanned_files_cache = real_files
         folder_cache_global = folders
         
-        # Prepare duplicates report structure
-        duplicate_groups = gdrive_dedup.find_duplicates(real_files)
+        is_selective = bool(names_filter or types_filter)
         
-        # Format the duplicates into a JSON-serializable list
-        formatted_groups = []
-        path_memo = {}
-        
-        for (name, size, md5), copies in sorted(duplicate_groups.items(), key=lambda x: x[0][0].lower()):
-            copies_sorted = sorted(copies, key=lambda f: f.get("createdTime", ""))
-            keeper = copies_sorted[0]
-            dupes = copies_sorted[1:]
+        if is_selective:
+            name_patterns = [p.strip() for p in names_filter.split(",")] if names_filter else []
+            mime_types = [p.strip() for p in types_filter.split(",")] if types_filter else []
             
-            group_copies = []
-            for item in copies_sorted:
+            filtered = gdrive_dedup.filter_files(real_files, name_patterns, mime_types)
+            formatted_files = []
+            path_memo = {}
+            for item in filtered:
                 path = gdrive_dedup.resolve_file_path(item, folders, path_memo)
-                group_copies.append({
+                formatted_files.append({
                     "id": item["id"],
                     "name": item.get("name", "Unknown"),
                     "path": path,
                     "size": int(item.get("size", 0)),
-                    "md5": item.get("md5Checksum"),
-                    "createdTime": item.get("createdTime", "Unknown"),
-                    "webViewLink": item.get("webViewLink", ""),
-                    "isKeeper": item["id"] == keeper["id"]
+                    "mimeType": item.get("mimeType", "Unknown"),
+                    "createdTime": item.get("createdTime", "Unknown")
                 })
+            scan_state["results"] = {
+                "files": formatted_files,
+                "total_files": len(real_files)
+            }
+        else:
+            # Prepare duplicates report structure
+            duplicate_groups = gdrive_dedup.find_duplicates(real_files)
             
-            formatted_groups.append({
-                "name": name,
-                "size": size,
-                "md5": md5,
-                "copies": group_copies
-            })
+            # Format the duplicates into a JSON-serializable list
+            formatted_groups = []
+            path_memo = {}
             
-        scan_state["results"] = {
-            "duplicates": formatted_groups,
-            "total_files": len(real_files)
-        }
+            for (name, size, md5), copies in sorted(duplicate_groups.items(), key=lambda x: x[0][0].lower()):
+                copies_sorted = sorted(copies, key=lambda f: f.get("createdTime", ""))
+                keeper = copies_sorted[0]
+                
+                group_copies = []
+                for item in copies_sorted:
+                    path = gdrive_dedup.resolve_file_path(item, folders, path_memo)
+                    group_copies.append({
+                        "id": item["id"],
+                        "name": item.get("name", "Unknown"),
+                        "path": path,
+                        "size": int(item.get("size", 0)),
+                        "md5": item.get("md5Checksum"),
+                        "createdTime": item.get("createdTime", "Unknown"),
+                        "webViewLink": item.get("webViewLink", ""),
+                        "isKeeper": item["id"] == keeper["id"]
+                    })
+                
+                formatted_groups.append({
+                    "name": name,
+                    "size": size,
+                    "md5": md5,
+                    "copies": group_copies
+                })
+                
+            scan_state["results"] = {
+                "duplicates": formatted_groups,
+                "total_files": len(real_files)
+            }
+            
         scan_state["status"] = "completed"
         
     except Exception as e:
@@ -491,7 +515,7 @@ def api_start_scan(req: ScanRequest, background_tasks: BackgroundTasks):
         # Check if token is ready before scanning in Real Mode
         if not is_token_present():
             raise HTTPException(status_code=400, detail="Google authentication required.")
-        background_tasks.add_task(bg_scan_real, req.include_shared)
+        background_tasks.add_task(bg_scan_real, req.include_shared, req.names, req.types)
     else:
         # Fallback to Demo Mode
         background_tasks.add_task(bg_scan_demo, req.names, req.types)

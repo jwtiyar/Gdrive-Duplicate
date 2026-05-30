@@ -1,5 +1,5 @@
 // ================= GLOBAL STATE =================
-let sessionToken = localStorage.getItem('session-token');
+let sessionToken = 'admin-session';
 let connectionMode = 'demo'; // 'demo' or 'real'
 let authStatus = { credentials_exist: false, token_active: false };
 let scanPollInterval = null;
@@ -75,21 +75,23 @@ function initAuth() {
   });
 
   // Handle Logout
-  btnLogout.addEventListener('click', async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (err) {
-      console.error('Logout error on server:', err);
-    }
-    
-    sessionToken = null;
-    localStorage.removeItem('session-token');
-    showLogin();
-    
-    // Reset state
-    clearInterval(scanPollInterval);
-    clearInterval(deletePollInterval);
-  });
+  if (btnLogout) {
+    btnLogout.addEventListener('click', async () => {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (err) {
+        console.error('Logout error on server:', err);
+      }
+      
+      sessionToken = null;
+      localStorage.removeItem('session-token');
+      showLogin();
+      
+      // Reset state
+      clearInterval(scanPollInterval);
+      clearInterval(deletePollInterval);
+    });
+  }
 }
 
 function showLogin() {
@@ -182,6 +184,14 @@ function initNavigation() {
     switchView(navSettings, paneSettings, 'Settings & Status');
     renderSettingsView();
   });
+
+  const btnSidebarSettings = document.getElementById('btn-sidebar-settings');
+  if (btnSidebarSettings) {
+    btnSidebarSettings.addEventListener('click', () => {
+      switchView(navSettings, paneSettings, 'Settings & Status');
+      renderSettingsView();
+    });
+  }
 }
 
 // ================= VIEW: DEDUPLICATOR STAGE =================
@@ -540,12 +550,11 @@ function initSelectiveDeleter() {
     const categoriesString = categoriesArray.join(',');
 
     selectivePreviewPanel.classList.add('hidden');
-    document.getElementById('dedup-setup-card').classList.add('hidden');
-    const scanProgressCard = document.getElementById('scan-progress-card');
-    scanProgressCard.classList.remove('hidden');
+    document.getElementById('selective-filter-card').classList.add('hidden');
+    selectiveFilterForm.parentElement.classList.add('hidden');
     
-    // Set title for progress screen
-    document.getElementById('scan-progress-title').textContent = 'Searching matching files...';
+    const selectiveProgressCard = document.getElementById('selective-progress-card');
+    selectiveProgressCard.classList.remove('hidden');
 
     try {
       const response = await fetch('/api/scan', {
@@ -566,7 +575,9 @@ function initSelectiveDeleter() {
       scanPollInterval = setInterval(pollSelectiveScanStatus, 500);
     } catch (err) {
       alert(`Error scanning files: ${err.message}`);
-      scanProgressCard.classList.add('hidden');
+      selectiveProgressCard.classList.add('hidden');
+      document.getElementById('selective-filter-card').classList.remove('hidden');
+      selectiveFilterForm.parentElement.classList.remove('hidden');
     }
   });
 
@@ -596,10 +607,12 @@ function initSelectiveDeleter() {
 
 // Poll scanning progress for Selective Deleter
 async function pollSelectiveScanStatus() {
-  const progressBar = document.getElementById('scan-progress-bar');
-  const fileStat = document.getElementById('scan-stat-files');
-  const folderStat = document.getElementById('scan-stat-folders');
-  const scanProgressCard = document.getElementById('scan-progress-card');
+  const progressBar = document.getElementById('selective-progress-bar');
+  const fileStat = document.getElementById('selective-stat-files');
+  const folderStat = document.getElementById('selective-stat-folders');
+  const selectiveProgressCard = document.getElementById('selective-progress-card');
+  const selectiveFilterCard = document.getElementById('selective-filter-card');
+  const selectiveFilterForm = document.getElementById('selective-filter-form');
   const selectivePreviewPanel = document.getElementById('selective-preview-panel');
   const summaryTitle = document.getElementById('selective-summary-title');
   const summaryDesc = document.getElementById('selective-summary-desc');
@@ -610,7 +623,7 @@ async function pollSelectiveScanStatus() {
 
     if (data.status === 'scanning') {
       const progress = data.progress;
-      fileStat.textContent = `Found matching: ${progress.scanned_count.toLocaleString()} files`;
+      fileStat.textContent = `Scanned: ${progress.scanned_count.toLocaleString()} files`;
       folderStat.textContent = `Cached: ${progress.folders_cached.toLocaleString()} folders`;
       
       let percent = Math.min(95, (progress.page_num * 25));
@@ -621,7 +634,9 @@ async function pollSelectiveScanStatus() {
       progressBar.style.width = '100%';
       
       setTimeout(() => {
-        scanProgressCard.classList.add('hidden');
+        selectiveProgressCard.classList.add('hidden');
+        selectiveFilterCard.classList.remove('hidden');
+        selectiveFilterForm.parentElement.classList.remove('hidden');
         selectivePreviewPanel.classList.remove('hidden');
         
         selectiveResults = data.results;
@@ -648,7 +663,9 @@ async function pollSelectiveScanStatus() {
     else if (data.status === 'error') {
       clearInterval(scanPollInterval);
       alert(`Search failed: ${data.error}`);
-      scanProgressCard.classList.add('hidden');
+      selectiveProgressCard.classList.add('hidden');
+      selectiveFilterCard.classList.remove('hidden');
+      selectiveFilterForm.parentElement.classList.remove('hidden');
     }
   } catch (err) {
     console.error('Error polling selective scan status:', err);
