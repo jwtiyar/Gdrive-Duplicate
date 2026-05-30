@@ -118,7 +118,7 @@ def authenticate():
 
 
 # -- file listing -------------------------------------------------------------
-def list_all_files(service, include_shared=False):
+def list_all_files(service, include_shared=False, progress_callback=None):
     """
     Page through the entire Drive and return:
       - real_files : list of non-trashed, non-Google-native file dicts
@@ -183,6 +183,8 @@ def list_all_files(service, include_shared=False):
 
         page_num += 1
         print(f"\rScanning Google Drive... {len(all_items):,} items (page {page_num})", end="", flush=True)
+        if progress_callback:
+            progress_callback(len(all_items), page_num, len(folder_cache))
 
         page_token = result.get("nextPageToken")
         if not page_token:
@@ -492,7 +494,7 @@ def export_preview_csv(files, folder_cache, path_memo):
 
 
 # -- deletion loops -----------------------------------------------------------
-def trash_files(service, files_to_delete):
+def trash_files(service, files_to_delete, progress_callback=None):
     """Move files to Trash. Recoverable from Drive UI."""
     success = failed = actual_bytes = 0
     total = len(files_to_delete)
@@ -511,11 +513,13 @@ def trash_files(service, files_to_delete):
             actual_bytes += size
         else:
             failed += 1
+        if progress_callback:
+            progress_callback(i, total, success, failed, actual_bytes)
 
     return success, failed, actual_bytes
 
 
-def purge_files(service, files_to_delete):
+def purge_files(service, files_to_delete, progress_callback=None):
     """Permanently delete files. NOT recoverable."""
     success = failed = actual_bytes = 0
     total = len(files_to_delete)
@@ -534,6 +538,8 @@ def purge_files(service, files_to_delete):
             actual_bytes += size
         else:
             failed += 1
+        if progress_callback:
+            progress_callback(i, total, success, failed, actual_bytes)
 
     return success, failed, actual_bytes
 

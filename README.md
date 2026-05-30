@@ -7,10 +7,30 @@ A fast, unified tool to clean up your Google Drive. It can act as a **Deduplicat
 This tool uses [uv](https://github.com/astral-sh/uv) to manage dependencies quickly.
 
 1. Ensure you have `uv` installed.
-2. Put your Google Drive `credentials.json` in this folder (downloaded from Google Cloud Console).
-3. The first time you run it, it will open a browser to authenticate and create a `token.json`.
+2. Put your Google Drive `credentials.json` in this folder (downloaded from Google Cloud Console). (Optional: if not present, the app starts in a fully interactive **Demo Mode**).
+3. The first time you run it in Real Mode, it will open a browser to authenticate and create a `token.json`.
 
-## Usage
+## Web GUI Dashboard (Recommended)
+
+A gorgeous, responsive web-based dashboard is available for a friendly, interactive cleanup experience.
+
+### 1. Launch the Server
+Run the GUI server using `uv`:
+```bash
+uv run python app.py
+```
+This starts a local FastAPI backend and automatically opens the GUI in your default browser at `http://127.0.0.1:8000`.
+
+### 2. Login
+Sign in to the local console using the default credentials:
+* **Username**: `admin`
+* **Password**: `password`
+
+### 3. Execution Modes
+* **Demo Mode**: If `credentials.json` is missing, a prominent purple badge will indicate you are in the sandbox. You can run scans, select duplicate groups, search categories, and see deletion progress bars using realistic simulated data.
+* **Real Mode**: If `credentials.json` is in the folder, connect your actual Google Account in the **Settings & Status** tab, then scan and clean your live Google Drive.
+
+## CLI Usage (Command Line)
 
 You can use the `uv run` command to run the script. It automatically handles all Python packages for you.
 

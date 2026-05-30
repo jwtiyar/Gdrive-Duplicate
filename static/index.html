@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A premium and secure dashboard to deduplicate and selectively clean files from your Google Drive folder.">
+  <title>Google Drive Cleaner - Professional Duplicate Remover</title>
+  <!-- Google Fonts: Outfit for titles, Inter for body -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" type="image/png" href="/static/logo.png">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <!-- ================= AUTH CONTAINER ================= -->
+  <main id="auth-container" class="auth-wrapper">
+    <div class="auth-card glass-panel animate-fade-in">
+      <div class="auth-header">
+        <div class="logo-icon-wrapper">
+          <img src="/static/logo.png" alt="Drive Cleaner Logo" style="width: 64px; height: 64px; border-radius: 12px; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(0,255,255,0.2);">
+        </div>
+        <h1 class="auth-title">Drive Cleaner</h1>
+        <p class="auth-subtitle">Login to access your local file cleanup utility</p>
+      </div>
+
+      <form id="login-form" class="auth-form">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <div class="input-wrapper">
+            <i data-lucide="user" class="input-icon"></i>
+            <input type="text" id="username" name="username" required placeholder="admin" autocomplete="username">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div class="input-wrapper">
+            <i data-lucide="lock" class="input-icon"></i>
+            <input type="password" id="password" name="password" required placeholder="••••••••" autocomplete="current-password">
+          </div>
+        </div>
+
+        <div id="login-error" class="error-banner hidden" role="alert">
+          <i data-lucide="alert-circle" class="error-icon"></i>
+          <span id="login-error-msg">Invalid credentials. Please try again.</span>
+        </div>
+
+        <button type="submit" id="btn-login" class="btn btn-primary btn-block">
+          <span>Sign In</span>
+          <i data-lucide="arrow-right" class="btn-icon-right"></i>
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <!-- ================= APP CONTAINER ================= -->
+  <div id="app-container" class="app-shell hidden">
+    
+    <!-- SIDEBAR -->
+    <aside id="app-sidebar" class="sidebar">
+      <div class="sidebar-brand">
+        <img src="/static/logo.png" alt="Logo" style="width: 28px; height: 28px; border-radius: 6px;">
+        <span class="brand-text">Drive Cleaner</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <ul>
+          <li>
+            <button id="nav-dedup" class="nav-item active">
+              <i data-lucide="copy" class="nav-icon"></i>
+              <span>Deduplicator</span>
+            </button>
+          </li>
+          <li>
+            <button id="nav-selective" class="nav-item">
+              <i data-lucide="filter" class="nav-icon"></i>
+              <span>Selective Deleter</span>
+            </button>
+          </li>
+          <li>
+            <button id="nav-settings" class="nav-item">
+              <i data-lucide="settings" class="nav-icon"></i>
+              <span>Settings & Status</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="connection-status-widget">
+          <div class="status-indicator-dot" id="sidebar-indicator-dot"></div>
+          <span class="status-text" id="sidebar-status-text">Checking connection...</span>
+        </div>
+        <button id="btn-logout" class="btn btn-outline btn-block btn-sm">
+          <i data-lucide="log-out" class="btn-icon-left"></i>
+          <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN WORKSPACE -->
+    <main id="app-main" class="main-content">
+      
+      <!-- TOP STATUS BAR -->
+      <header class="topbar">
+        <h2 id="view-title" class="page-title">Duplicate Finder</h2>
+        <div class="topbar-actions">
+          <div id="mode-badge" class="badge badge-demo">Demo Mode</div>
+        </div>
+      </header>
+
+      <!-- VIEW: DEDUPLICATOR -->
+      <section id="view-dedup-content" class="view-pane">
+        
+        <!-- INITIAL DISCONNECTED / EMPTY STATE -->
+        <div id="dedup-setup-card" class="glass-panel card p-lg text-center">
+          <i data-lucide="copy-check" class="card-hero-icon accent-glow"></i>
+          <h3>Scan for Duplicate Files</h3>
+          <p class="text-secondary max-width-md mx-auto">
+            Our engine groups files by name, size, and MD5 checksum. We automatically mark duplicate copies for deletion while keeping the oldest original safe.
+          </p>
+          
+          <div class="scan-options my-md">
+            <label class="checkbox-container mx-auto">
+              <input type="checkbox" id="dedup-shared-drives">
+              <span class="checkmark"></span>
+              <span class="label-text">Include Shared Drives in Scan</span>
+            </label>
+          </div>
+
+          <button id="btn-start-scan" class="btn btn-primary btn-lg">
+            <i data-lucide="play" class="btn-icon-left"></i>
+            <span>Scan Google Drive</span>
+          </button>
+        </div>
+
+        <!-- SCAN PROGRESS STATE -->
+        <div id="scan-progress-card" class="glass-panel card p-lg text-center hidden">
+          <div class="spinner-wrapper">
+            <div class="double-bounce-spinner"></div>
+            <i data-lucide="search" class="spinner-center-icon"></i>
+          </div>
+          <h3 id="scan-progress-title">Scanning Google Drive...</h3>
+          <p class="text-secondary" id="scan-progress-subtitle">Fetching metadata page by page</p>
+
+          <div class="progress-container max-width-sm mx-auto my-md">
+            <div class="progress-bar-track">
+              <div id="scan-progress-bar" class="progress-bar-fill animated-pulse" style="width: 5%"></div>
+            </div>
+            <div class="progress-stats-row text-secondary">
+              <span id="scan-stat-files">Scanned: 0 files</span>
+              <span id="scan-stat-folders">Cached: 0 folders</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- DUPLICATES RESULTS PANEL -->
+        <div id="dedup-results-panel" class="results-wrapper hidden">
+          
+          <!-- Summary Header -->
+          <div class="results-summary-card glass-panel p-md my-sm flex-row flex-justify-between flex-align-center">
+            <div>
+              <h3 id="results-summary-title">Ready to Clean</h3>
+              <p class="text-secondary mb-0" id="results-summary-desc">We found 0 duplicate copies across 0 file groups.</p>
+            </div>
+            <div class="summary-actions">
+              <button id="btn-export-csv" class="btn btn-outline">
+                <i data-lucide="download" class="btn-icon-left"></i>
+                <span>Export CSV</span>
+              </button>
+              <button id="btn-open-delete-dialog" class="btn btn-primary">
+                <i data-lucide="trash-2" class="btn-icon-left"></i>
+                <span>Clean Selected (<span id="selected-reclaim-size">0 B</span>)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Filters & Select All Toolbar -->
+          <div class="results-toolbar">
+            <div class="search-box">
+              <i data-lucide="search" class="search-box-icon"></i>
+              <input type="text" id="dedup-search-input" placeholder="Search duplicates by name...">
+            </div>
+            <div class="selection-shortcuts">
+              <button id="btn-select-all-dupes" class="btn btn-text btn-sm">Select All Duplicates</button>
+              <button id="btn-deselect-all-dupes" class="btn btn-text btn-sm">Keep All Files</button>
+            </div>
+          </div>
+
+          <!-- Groups Accordion List -->
+          <div id="duplicate-groups-list" class="accordion-list">
+            <!-- Dynamic Injection -->
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- VIEW: SELECTIVE DELETER -->
+      <section id="view-selective-content" class="view-pane hidden">
+        
+        <!-- Filter Criteria Panel -->
+        <div class="glass-panel card p-md mb-md">
+          <h3>Selective Deletion Filters</h3>
+          <p class="text-secondary">Search for specific file patterns and categories to perform bulk trashing.</p>
+
+          <form id="selective-filter-form" class="selective-grid">
+            <div class="form-group">
+              <label for="selective-names">File Name Patterns</label>
+              <div class="input-wrapper">
+                <i data-lucide="search" class="input-icon"></i>
+                <input type="text" id="selective-names" placeholder="e.g. temp, backup, draft (comma-separated)">
+              </div>
+              <small class="text-muted">Matches filenames containing any of these phrases (case insensitive).</small>
+            </div>
+
+            <div class="form-group">
+              <label>MIME Types & Categories</label>
+              <div class="mime-pills-container" id="mime-pills-list">
+                <button type="button" class="mime-pill" data-category="Images">
+                  <i data-lucide="image" class="pill-icon"></i>
+                  <span>Images</span>
+                </button>
+                <button type="button" class="mime-pill" data-category="Videos">
+                  <i data-lucide="video" class="pill-icon"></i>
+                  <span>Videos</span>
+                </button>
+                <button type="button" class="mime-pill" data-category="Audio">
+                  <i data-lucide="music" class="pill-icon"></i>
+                  <span>Audio</span>
+                </button>
+                <button type="button" class="mime-pill" data-category="Documents">
+                  <i data-lucide="file-text" class="pill-icon"></i>
+                  <span>Documents</span>
+                </button>
+                <button type="button" class="mime-pill" data-category="Archives">
+                  <i data-lucide="zip-a" style="display:none;"></i> <!-- Hidden, custom code loads Lucide fallback -->
+                  <i data-lucide="archive" class="pill-icon"></i>
+                  <span>Archives</span>
+                </button>
+                <button type="button" class="mime-pill" data-category="Code">
+                  <i data-lucide="code-2" class="pill-icon"></i>
+                  <span>Code</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group full-width flex-row flex-justify-between flex-align-center border-top pt-md">
+              <label class="checkbox-container">
+                <input type="checkbox" id="selective-shared-drives">
+                <span class="checkmark"></span>
+                <span class="label-text">Include Shared Drives</span>
+              </label>
+              
+              <button type="submit" id="btn-preview-selective" class="btn btn-primary">
+                <i data-lucide="eye" class="btn-icon-left"></i>
+                <span>Preview Matching Files</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- PREVIEW SELECTION VIEW -->
+        <div id="selective-preview-panel" class="results-wrapper hidden">
+          
+          <div class="results-summary-card glass-panel p-md my-sm flex-row flex-justify-between flex-align-center">
+            <div>
+              <h3 id="selective-summary-title">Matching Files Preview</h3>
+              <p class="text-secondary mb-0" id="selective-summary-desc">Found 0 files matching search criteria.</p>
+            </div>
+            <div class="summary-actions">
+              <button id="btn-open-selective-delete-dialog" class="btn btn-primary">
+                <i data-lucide="trash-2" class="btn-icon-left"></i>
+                <span>Trash Selected (<span id="selective-selected-size">0 B</span>)</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="results-toolbar">
+            <span class="text-secondary" id="selective-selection-counter">0 files selected</span>
+            <div class="selection-shortcuts">
+              <button id="btn-selective-select-all" class="btn btn-text btn-sm">Select All</button>
+              <button id="btn-selective-deselect-all" class="btn btn-text btn-sm">Deselect All</button>
+            </div>
+          </div>
+
+          <div class="glass-panel table-container">
+            <table class="data-table" id="selective-table">
+              <thead>
+                <tr>
+                  <th width="40"><input type="checkbox" id="header-select-all-selective"></th>
+                  <th>Name</th>
+                  <th>Folder Path</th>
+                  <th>Size</th>
+                  <th>Type</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody id="selective-preview-tbody">
+                <!-- Dynamic Injection -->
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- VIEW: SETTINGS & STATUS -->
+      <section id="view-settings-content" class="view-pane hidden">
+        
+        <div class="settings-grid" style="grid-template-columns: 1fr; max-width: 600px; margin: 0 auto;">
+          
+          <!-- Google Drive Auth Configuration Card -->
+          <div class="glass-panel card p-md">
+            <h3>Google Drive Authorization</h3>
+            <p class="text-secondary">Link your Google Account to access and clean your files.</p>
+
+            <div class="settings-status-box my-md p-sm" id="google-auth-config-box">
+              <div class="flex-row flex-align-center gap-sm mb-sm">
+                <i data-lucide="circle-dot" class="status-indicator-icon" id="settings-auth-icon"></i>
+                <h4 id="settings-auth-title" class="mb-0">Scanning configuration</h4>
+              </div>
+              <p id="settings-auth-desc" class="text-secondary mb-0">Checking environment credentials...</p>
+            </div>
+
+            <div class="flex-row gap-sm border-top py-md" id="settings-auth-actions">
+              <!-- Dynamically populated buttons -->
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- RUNNING DELETION PROGRESS CARD -->
+      <div id="deletion-progress-overlay" class="fullscreen-overlay hidden">
+        <div class="glass-panel modal-card p-lg text-center animate-zoom-in">
+          <div class="spinner-wrapper">
+            <div class="double-bounce-spinner danger-spinner"></div>
+            <i data-lucide="trash-2" class="spinner-center-icon text-danger"></i>
+          </div>
+          <h3 id="delete-progress-title">Deleting Files...</h3>
+          <p class="text-secondary" id="delete-progress-subtitle">Communicating with Google Drive API</p>
+
+          <div class="progress-container max-width-sm mx-auto my-md">
+            <div class="progress-bar-track">
+              <div id="delete-progress-bar" class="progress-bar-fill progress-danger" style="width: 5%"></div>
+            </div>
+            <div class="progress-stats-row text-secondary">
+              <span id="delete-stat-count">Deleted: 0/0 files</span>
+              <span id="delete-stat-size">Space Reclaimed: 0 B</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ================= CONFIRMATION DIALOG ================= -->
+  <!-- Dialog box supporting light-dismiss closedby="any" -->
+  <dialog id="confirm-delete-dialog" closedby="any" class="glass-panel modal-dialog text-center p-lg">
+    <form method="dialog" class="dialog-form">
+      <div class="dialog-icon-wrapper danger-alert">
+        <i data-lucide="shield-alert" class="dialog-icon text-danger"></i>
+      </div>
+      <h3 class="text-danger mt-sm">Confirm Deletion</h3>
+      <p class="text-secondary my-sm" id="confirm-dialog-msg">
+        Are you sure you want to delete these duplicate files?
+      </p>
+
+      <div class="dialog-action-choices my-md text-left" id="purge-option-container">
+        <label class="checkbox-container">
+          <input type="checkbox" id="checkbox-purge-permanently">
+          <span class="checkmark border-danger"></span>
+          <span class="label-text"><strong>Permanently delete files</strong> (bypass Google Drive Trash - IRREVERSIBLE)</span>
+        </label>
+      </div>
+
+      <div class="dialog-buttons">
+        <button type="button" id="btn-dialog-cancel" class="btn btn-outline">Cancel</button>
+        <button type="button" id="btn-dialog-confirm" class="btn btn-danger">Confirm Deletion</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Main JavaScript App Logic -->
+  <script src="/static/app.js"></script>
+</body>
+</html>
