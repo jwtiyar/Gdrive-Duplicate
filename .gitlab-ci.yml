@@ -1,0 +1,16 @@
+stages:
+  - build
+
+build-windows-exe:
+  stage: build
+  image: python:3.11-windows
+  tags:
+    - saas-windows-medium-amd64
+  script:
+    - pip install uv
+    - uv pip install --system fastapi google-api-python-client google-auth-httplib2 google-auth-oauthlib python-dotenv uvicorn pyinstaller httpx pytest
+    - pyinstaller --name DriveCleaner --add-data "static;static" --onefile main.py
+  artifacts:
+    paths:
+      - dist/DriveCleaner.exe
+    expire_in: 1 week
