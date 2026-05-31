@@ -1,0 +1,35 @@
+name: Build Windows Executable
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install uv
+      run: pip install uv
+        
+    - name: Install dependencies
+      run: uv pip install --system fastapi google-api-python-client google-auth-httplib2 google-auth-oauthlib python-dotenv uvicorn pytest httpx pyinstaller
+
+    - name: Build with PyInstaller
+      run: pyinstaller --name DriveCleaner --add-data "static;static" --onefile main.py
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: DriveCleaner-Windows-EXE
+        path: dist/DriveCleaner.exe

@@ -548,21 +548,24 @@ def api_delete_status():
     return delete_state
 
 # -- Serve Static Assets -----------------------------------------------------
+def get_base_dir():
+    return getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+
 # Serve HTML dashboard
 @app.get("/")
 def read_root():
-    static_index = os.path.join(os.path.dirname(__file__), "static", "index.html")
+    static_index = os.path.join(get_base_dir(), "static", "index.html")
     if os.path.exists(static_index):
         return FileResponse(static_index)
     return JSONResponse(
-        content={"error": "Frontend code not found. Create 'static/index.html' first."},
+        content={"error": f"Frontend code not found at {static_index}."},
         status_code=404
     )
 
 # Try mounting the static directory. We'll build the files next.
-static_dir = os.path.join(os.path.dirname(__file__), "static")
+static_dir = os.path.join(get_base_dir(), "static")
 if not os.path.exists(static_dir):
-    os.makedirs(static_dir)
+    os.makedirs(static_dir, exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 

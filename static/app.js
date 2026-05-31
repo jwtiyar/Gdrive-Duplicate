@@ -229,7 +229,7 @@ function initDeduplicator() {
       // Start status polling
       scanPollInterval = setInterval(pollScanStatus, 500);
     } catch (err) {
-      alert(`Error starting scan: ${err.message}`);
+      showToast(`Error starting scan: ${err.message}`);
       dedupSetupCard.classList.remove('hidden');
       scanProgressCard.classList.add('hidden');
     }
@@ -362,7 +362,7 @@ async function pollScanStatus() {
     } 
     else if (data.status === 'error') {
       clearInterval(scanPollInterval);
-      alert(`Scan failed: ${data.error}`);
+      showToast(`Scan failed: ${data.error}`);
       document.getElementById('dedup-setup-card').classList.remove('hidden');
       scanProgressCard.classList.add('hidden');
     }
@@ -574,7 +574,7 @@ function initSelectiveDeleter() {
 
       scanPollInterval = setInterval(pollSelectiveScanStatus, 500);
     } catch (err) {
-      alert(`Error scanning files: ${err.message}`);
+      showToast(`Error scanning files: ${err.message}`);
       selectiveProgressCard.classList.add('hidden');
       document.getElementById('selective-filter-card').classList.remove('hidden');
       selectiveFilterForm.parentElement.classList.remove('hidden');
@@ -662,7 +662,7 @@ async function pollSelectiveScanStatus() {
     } 
     else if (data.status === 'error') {
       clearInterval(scanPollInterval);
-      alert(`Search failed: ${data.error}`);
+      showToast(`Search failed: ${data.error}`);
       selectiveProgressCard.classList.add('hidden');
       selectiveFilterCard.classList.remove('hidden');
       selectiveFilterForm.parentElement.classList.remove('hidden');
@@ -819,7 +819,7 @@ async function handleConnectGoogle() {
     }, 1000);
     
   } catch (err) {
-    alert(`Failed to start authorization: ${err.message}`);
+    showToast(`Failed to start authorization: ${err.message}`);
     btn.disabled = false;
     btn.textContent = 'Connect Google Account';
   }
@@ -834,7 +834,7 @@ async function handleDisconnectGoogle() {
         renderSettingsView();
       }
     } catch (err) {
-      alert(`Error disconnecting: ${err.message}`);
+      showToast(`Error disconnecting: ${err.message}`);
     }
   }
 }
@@ -861,7 +861,7 @@ function initDialogs() {
   // Open Dialog from Deduplicator
   btnOpenDeleteDialog.addEventListener('click', () => {
     if (selectedDupeIds.size === 0) {
-      alert('Please select at least one duplicate file to delete.');
+      showToast('Please select at least one duplicate file to delete.');
       return;
     }
     currentDeleteTarget = 'dedup';
@@ -884,7 +884,7 @@ function initDialogs() {
   // Open Dialog from Selective Deleter
   btnOpenSelectiveDeleteDialog.addEventListener('click', () => {
     if (selectedSelectiveIds.size === 0) {
-      alert('Please select at least one file to delete.');
+      showToast('Please select at least one file to delete.');
       return;
     }
     currentDeleteTarget = 'selective';
@@ -964,7 +964,7 @@ async function triggerDeletion(fileIds, purge) {
     // Start Polling Deletion Progress
     deletePollInterval = setInterval(pollDeleteStatus, 500);
   } catch (err) {
-    alert(`Error: ${err.message}`);
+    showToast(`Error: ${err.message}`);
     overlay.classList.add('hidden');
   }
 }
@@ -993,7 +993,7 @@ async function pollDeleteStatus() {
       
       setTimeout(() => {
         overlay.classList.add('hidden');
-        alert('Cleanup completed successfully!');
+        showToast('Cleanup completed successfully!');
         
         // Return to setup / reset layout
         resetAppWorkflowState();
@@ -1001,7 +1001,7 @@ async function pollDeleteStatus() {
     } 
     else if (data.status === 'error') {
       clearInterval(deletePollInterval);
-      alert(`Deletion failed: ${data.error}`);
+      showToast(`Deletion failed: ${data.error}`);
       overlay.classList.add('hidden');
     }
   } catch (err) {
@@ -1041,4 +1041,45 @@ function formatBytes(bytes, decimals = 2) {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+
+// ================= TOAST NOTIFICATIONS =================
+function showToast(message, type = 'error') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  
+  if (message.includes('success')) {
+      type = 'success';
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  
+  let iconName = 'info';
+  if (type === 'error') iconName = 'alert-circle';
+  if (type === 'success') iconName = 'check-circle';
+
+  toast.innerHTML = `
+    <i data-lucide="${iconName}" class="toast-icon"></i>
+    <div class="toast-message">${message}</div>
+    <button class="toast-close"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+  `;
+
+  container.appendChild(toast);
+  lucide.createIcons({ root: toast });
+
+  const closeBtn = toast.querySelector('.toast-close');
+  
+  const hideToast = () => {
+    toast.classList.add('toast-hiding');
+    toast.addEventListener('animationend', () => {
+      if (toast.parentElement) {
+        toast.remove();
+      }
+    });
+  };
+
+  closeBtn.addEventListener('click', hideToast);
+  setTimeout(hideToast, 5000); // Auto hide after 5 seconds
 }
