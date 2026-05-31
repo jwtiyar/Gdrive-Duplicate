@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "master", "main" ]
     tags:
-      - 'v*' # Trigger on version tags (e.g., v1.0.0)
+      - '*' # Trigger on any version tag
   pull_request:
     branches: [ "master", "main" ]
   workflow_dispatch:
@@ -40,7 +40,7 @@ jobs:
         path: dist/DriveCleaner.exe
         
     - name: Create GitHub Release
-      if: startsWith(github.ref, 'refs/tags/v') # Only run this step if a tag was pushed
+      if: startsWith(github.ref, 'refs/tags/') # Run if ANY tag was pushed
       uses: softprops/action-gh-release@v2
       with:
         files: dist/DriveCleaner.exe
