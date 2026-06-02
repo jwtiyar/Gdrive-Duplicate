@@ -186,9 +186,10 @@ def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types
             formatted_groups = []
             path_memo = {}
             
-            for (name, size, md5), copies in sorted(duplicate_groups.items(), key=lambda x: x[0][0].lower()):
+            for (size, md5), copies in sorted(duplicate_groups.items(), key=lambda x: x[1][0].get("name", "").lower()):
                 copies_sorted = sorted(copies, key=lambda f: f.get("createdTime", ""))
                 keeper = copies_sorted[0]
+                group_name = keeper.get("name", "Unknown")
                 
                 group_copies = []
                 for item in copies_sorted:
@@ -205,7 +206,7 @@ def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types
                     })
                 
                 formatted_groups.append({
-                    "name": name,
+                    "name": group_name,
                     "size": size,
                     "md5": md5,
                     "copies": group_copies
@@ -319,9 +320,10 @@ def bg_scan_demo(names_filter: Optional[str] = None, types_filter: Optional[str]
         formatted_groups = []
         path_memo = {}
         
-        for (name, size, md5), copies in sorted(duplicate_groups.items(), key=lambda x: x[0][0].lower()):
+        for (size, md5), copies in sorted(duplicate_groups.items(), key=lambda x: x[1][0].get("name", "").lower()):
             copies_sorted = sorted(copies, key=lambda f: f.get("createdTime", ""))
             keeper = copies_sorted[0]
+            group_name = keeper.get("name", "Unknown")
             
             group_copies = []
             for item in copies_sorted:
@@ -338,7 +340,7 @@ def bg_scan_demo(names_filter: Optional[str] = None, types_filter: Optional[str]
                 })
             
             formatted_groups.append({
-                "name": name,
+                "name": group_name,
                 "size": size,
                 "md5": md5,
                 "copies": group_copies

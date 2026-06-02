@@ -213,7 +213,8 @@ def list_all_files(service, include_shared=False, progress_callback=None):
 # -- duplicate detection ------------------------------------------------------
 def find_duplicates(files):
     """
-    Group files by (name, size, md5Checksum).
+    Group files by (size, md5Checksum).
+    Files with the same content are duplicates regardless of name.
     Files missing an md5Checksum are skipped entirely to avoid false positives.
     Returns only groups with 2+ members.
     """
@@ -224,11 +225,10 @@ def find_duplicates(files):
         if not md5:                          # no checksum = can't safely deduplicate
             continue
 
-        name     = f.get("name", "Unknown")
         size_raw = f.get("size")
         size     = int(size_raw) if size_raw else 0
 
-        groups[(name, size, md5)].append(f)
+        groups[(size, md5)].append(f)
 
     return {k: v for k, v in groups.items() if len(v) > 1}
 
@@ -326,15 +326,16 @@ def print_report(duplicate_groups, folder_cache):
     print("  DUPLICATE FILE REPORT")
     print("=" * 70)
 
-    for (name, size, md5), copies in sorted(
-        duplicate_groups.items(), key=lambda x: x[0][0].lower()
+    for (size, md5), copies in sorted(
+        duplicate_groups.items(), key=lambda x: x[1][0].get("name", "").lower()
     ):
         group_count += 1
         copies_sorted = sorted(copies, key=lambda f: f.get("createdTime", ""))
         keeper = copies_sorted[0]
         dupes  = copies_sorted[1:]
+        group_name = keeper.get("name", "Unknown")
 
-        print(f"\n[{group_count}] {name}")
+        print(f"\n[{group_count}] {group_name}")
         print(f"     Size : {bytes_human(size)}   MD5: {md5}")
         print(f"     Copies: {len(copies_sorted)}  ->  Keep 1, Delete {len(dupes)}")
 
@@ -372,8 +373,8 @@ def export_report_csv(duplicate_groups, files_to_delete_tuples, folder_cache, pa
         writer.writerow(["group", "action", "name", "path", "size_bytes", "md5",
                          "created", "id", "webViewLink"])
 
-        for group_num, ((name, size, md5), copies) in enumerate(
-            sorted(duplicate_groups.items(), key=lambda x: x[0][0].lower()), 1
+        for group_num, ((size, md5), copies) in enumerate(
+            sorted(duplicate_groups.items(), key=lambda x: x[1][0].get("name", "").lower()), 1
         ):
             for f in sorted(copies, key=lambda f: f.get("createdTime", "")):
                 path = resolve_file_path(f, folder_cache, path_memo)
