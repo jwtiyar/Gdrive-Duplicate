@@ -1,6 +1,29 @@
 #!/usr/bin/env python3
 import os
 import sys
+
+# Wrap sys.stdout and sys.stderr to catch and ignore Errno 5 I/O errors when running in background/no TTY
+class SafeStdout:
+    def __init__(self, original):
+        self.original = original
+    def write(self, data):
+        if self.original:
+            try:
+                self.original.write(data)
+            except Exception:
+                pass
+    def flush(self):
+        if self.original:
+            try:
+                self.original.flush()
+            except Exception:
+                pass
+    def __getattr__(self, name):
+        return getattr(self.original, name)
+
+sys.stdout = SafeStdout(sys.stdout)
+sys.stderr = SafeStdout(sys.stderr)
+
 import time
 import threading
 import webbrowser
