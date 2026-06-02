@@ -235,6 +235,13 @@ function initDeduplicator() {
     }
   });
 
+  const btnRescanDedup = document.getElementById('btn-rescan-dedup');
+  if (btnRescanDedup) {
+    btnRescanDedup.addEventListener('click', () => {
+      btnStartScan.click();
+    });
+  }
+
   // Export CSV
   btnExportCsv.addEventListener('click', () => {
     if (!scanResults || !scanResults.duplicates) return;
@@ -580,6 +587,16 @@ function initSelectiveDeleter() {
       selectiveFilterForm.parentElement.classList.remove('hidden');
     }
   });
+
+  const btnRescanSelective = document.getElementById('btn-rescan-selective');
+  if (btnRescanSelective) {
+    btnRescanSelective.addEventListener('click', () => {
+      const btnPreviewSelective = document.getElementById('btn-preview-selective');
+      if (btnPreviewSelective) {
+        btnPreviewSelective.click();
+      }
+    });
+  }
 
   // Select/Deselect shortcuts for table rows
   btnSelectiveSelectAll.addEventListener('click', () => {

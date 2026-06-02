@@ -167,7 +167,11 @@
               <h3 id="results-summary-title">Ready to Clean</h3>
               <p class="text-secondary mb-0" id="results-summary-desc">We found 0 duplicate copies across 0 file groups.</p>
             </div>
-            <div class="summary-actions">
+            <div class="summary-actions flex-row gap-sm">
+              <button id="btn-rescan-dedup" class="btn btn-outline">
+                <i data-lucide="rotate-cw" class="btn-icon-left"></i>
+                <span>Rescan</span>
+              </button>
               <button id="btn-export-csv" class="btn btn-outline">
                 <i data-lucide="download" class="btn-icon-left"></i>
                 <span>Export CSV</span>
@@ -294,7 +298,11 @@
               <h3 id="selective-summary-title">Matching Files Preview</h3>
               <p class="text-secondary mb-0" id="selective-summary-desc">Found 0 files matching search criteria.</p>
             </div>
-            <div class="summary-actions">
+            <div class="summary-actions flex-row gap-sm">
+              <button id="btn-rescan-selective" class="btn btn-outline">
+                <i data-lucide="rotate-cw" class="btn-icon-left"></i>
+                <span>Rescan</span>
+              </button>
               <button id="btn-open-selective-delete-dialog" class="btn btn-primary">
                 <i data-lucide="trash-2" class="btn-icon-left"></i>
                 <span>Trash Selected (<span id="selective-selected-size">0 B</span>)</span>
