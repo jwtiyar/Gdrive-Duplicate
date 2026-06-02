@@ -44,6 +44,8 @@ app = FastAPI(title="Google Drive Cleaner GUI")
 class ScanRequest(BaseModel):
     names: Optional[str] = None
     types: Optional[str] = None
+    min_size_mb: Optional[float] = None
+    max_size_mb: Optional[float] = None
     include_shared: bool = False
     strict_name: bool = False
 
@@ -129,7 +131,7 @@ def is_token_present() -> bool:
     return os.path.exists(gdrive_dedup.TOKEN_FILE)
 
 # -- Background Scan Task (Real Mode) ----------------------------------------
-def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types_filter: Optional[str] = None, strict_name: bool = False):
+def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types_filter: Optional[str] = None, strict_name: bool = False, min_size_mb: Optional[float] = None, max_size_mb: Optional[float] = None):
     global scanned_files_cache, folder_cache_global, scan_cancelled
     scan_cancelled = False
     scan_state["status"] = "scanning"
@@ -156,13 +158,18 @@ def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types
         scanned_files_cache = real_files
         folder_cache_global = folders
         
-        is_selective = bool(names_filter or types_filter)
+        is_selective = bool(names_filter or types_filter or min_size_mb is not None or max_size_mb is not None)
         
         if is_selective:
             name_patterns = [p.strip() for p in names_filter.split(",")] if names_filter else []
-            mime_types = [p.strip() for p in types_filter.split(",")] if types_filter else []
-            
-            filtered = gdrive_dedup.filter_files(real_files, name_patterns, mime_types)
+            mime_types    = [p.strip() for p in types_filter.split(",")] if types_filter else []
+            filtered = gdrive_dedup.filter_files(
+                real_files, 
+                name_patterns, 
+                mime_types, 
+                min_size_mb=min_size_mb, 
+                max_size_mb=max_size_mb
+            )
             formatted_files = []
             path_memo = {}
             for item in filtered:
@@ -257,10 +264,16 @@ def bg_delete_real(file_ids: List[str], purge: bool):
 
     try:
         service = gdrive_dedup.authenticate()
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_filename = f"deletion_history_{timestamp}.txt"
+        log_path = os.path.abspath(log_filename)
+        delete_state["log_path"] = log_path
+        
         if purge:
-            gdrive_dedup.purge_files(service, files_to_delete, progress_callback=progress_callback, cancel_check=lambda: delete_cancelled)
+            gdrive_dedup.purge_files(service, files_to_delete, progress_callback=progress_callback, cancel_check=lambda: delete_cancelled, log_path=log_path)
         else:
-            gdrive_dedup.trash_files(service, files_to_delete, progress_callback=progress_callback, cancel_check=lambda: delete_cancelled)
+            gdrive_dedup.trash_files(service, files_to_delete, progress_callback=progress_callback, cancel_check=lambda: delete_cancelled, log_path=log_path)
         
         delete_state["status"] = "completed"
     except InterruptedError:
@@ -369,7 +382,15 @@ def api_start_scan(req: ScanRequest, background_tasks: BackgroundTasks):
         # Check if token is ready before scanning in Real Mode
         if not is_token_present():
             raise HTTPException(status_code=400, detail="Google authentication required.")
-        background_tasks.add_task(bg_scan_real, req.include_shared, req.names, req.types, req.strict_name)
+        background_tasks.add_task(
+            bg_scan_real, 
+            req.include_shared, 
+            req.names, 
+            req.types, 
+            req.strict_name,
+            req.min_size_mb,
+            req.max_size_mb
+        )
     else:
         raise HTTPException(status_code=400, detail="Credentials not found.")
         

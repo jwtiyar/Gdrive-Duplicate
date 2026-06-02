@@ -447,13 +447,21 @@ def match_mime_types(file_mime, mime_types):
             expanded_types.add(mt)
     return file_mime in expanded_types
 
-def filter_files(files, name_patterns, mime_types):
+def filter_files(files, name_patterns, mime_types, min_size_mb=None, max_size_mb=None):
     filtered = []
     for f in files:
         if not match_name(f.get("name", ""), name_patterns):
             continue
         if not match_mime_types(f.get("mimeType", ""), mime_types):
             continue
+        
+        size_raw = f.get("size")
+        size_mb = (int(size_raw) / (1024 * 1024)) if size_raw else 0
+        if min_size_mb is not None and size_mb < min_size_mb:
+            continue
+        if max_size_mb is not None and size_mb > max_size_mb:
+            continue
+            
         filtered.append(f)
     return filtered
 
@@ -503,7 +511,7 @@ def export_preview_csv(files, folder_cache, path_memo):
 
 
 # -- deletion loops -----------------------------------------------------------
-def trash_files(service, files_to_delete, progress_callback=None, cancel_check=None):
+def trash_files(service, files_to_delete, progress_callback=None, cancel_check=None, log_path=None):
     """Move files to Trash. Recoverable from Drive UI."""
     success = failed = actual_bytes = 0
     total = len(files_to_delete)
@@ -523,6 +531,13 @@ def trash_files(service, files_to_delete, progress_callback=None, cancel_check=N
             print(f"  [{i}/{total}] Trashed: {fname}")
             success      += 1
             actual_bytes += size
+            
+            if log_path:
+                try:
+                    with open(log_path, 'a', encoding='utf-8') as logf:
+                        logf.write(f"[TRASHED] {fname} (ID: {fid}, Size: {bytes_human(size)})\n")
+                except:
+                    pass
         else:
             failed += 1
         if progress_callback:
@@ -531,7 +546,7 @@ def trash_files(service, files_to_delete, progress_callback=None, cancel_check=N
     return success, failed, actual_bytes
 
 
-def purge_files(service, files_to_delete, progress_callback=None, cancel_check=None):
+def purge_files(service, files_to_delete, progress_callback=None, cancel_check=None, log_path=None):
     """Permanently delete files. NOT recoverable."""
     success = failed = actual_bytes = 0
     total = len(files_to_delete)
@@ -551,6 +566,13 @@ def purge_files(service, files_to_delete, progress_callback=None, cancel_check=N
             print(f"  [{i}/{total}] Purged : {fname}")
             success      += 1
             actual_bytes += size
+            
+            if log_path:
+                try:
+                    with open(log_path, 'a', encoding='utf-8') as logf:
+                        logf.write(f"[PURGED] {fname} (ID: {fid}, Size: {bytes_human(size)})\n")
+                except:
+                    pass
         else:
             failed += 1
         if progress_callback:
