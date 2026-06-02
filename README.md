@@ -1,41 +1,37 @@
-# Google Drive Cleaner
+# DriveCleaner
 
-A fast, unified tool to clean up your Google Drive. It can act as a **Deduplicator** or a **Selective Deleter** (searching by name/MIME type). 
+A fast, unified tool to clean up your Google Drive. It can act as a **Deduplicator** or a **Selective Deleter** (searching by name/MIME type). Features a gorgeous, responsive web-based GUI and pre-compiled executables for ease of use.
 
-## Setup
+## Setup & Execution
 
-This tool uses [uv](https://github.com/astral-sh/uv) to manage dependencies quickly.
+### Option 1: Use the Pre-compiled Executables (Recommended)
+You do not need Python installed! Simply download the latest release for your OS from the Releases page (built automatically via GitHub Actions & GitLab CI):
+- `DriveCleaner-Windows.exe` (Windows)
+- `DriveCleaner-Linux` (Linux Binary)
 
-1. Ensure you have `uv` installed.
-2. Put your Google Drive `credentials.json` in this folder (downloaded from Google Cloud Console). (Optional: if not present, the app starts in a fully interactive **Demo Mode**).
-3. The first time you run it in Real Mode, it will open a browser to authenticate and create a `token.json`.
+### Option 2: Run from Source
+This tool uses `uv` for fast dependency management.
+1. Ensure you have [uv](https://github.com/astral-sh/uv) installed.
+2. Run the application:
+   ```bash
+   uv run uvicorn app:app --port 8000 --host 127.0.0.1
+   ```
 
-## Web GUI Dashboard (Recommended)
+## Using the Application
 
-A gorgeous, responsive web-based dashboard is available for a friendly, interactive cleanup experience.
-
-### 1. Launch the Server
-Run the GUI server using `uv`:
-```bash
-uv run python app.py
-```
-This starts a local FastAPI backend and automatically opens the GUI in your default browser at `http://127.0.0.1:8000`.
-
-### 2. Login
-Sign in to the local console using the default credentials:
-* **Username**: `admin`
-* **Password**: `password`
-
-### 3. Execution Modes
-* **Demo Mode**: If `credentials.json` is missing, a prominent purple badge will indicate you are in the sandbox. You can run scans, select duplicate groups, search categories, and see deletion progress bars using realistic simulated data.
-* **Real Mode**: If `credentials.json` is in the folder, connect your actual Google Account in the **Settings & Status** tab, then scan and clean your live Google Drive.
+1. **Get Google Credentials:**
+   Before running the app, you must generate an OAuth 2.0 Client ID for a Desktop Application in the Google Cloud Console. 
+   Download the file and save it as `credentials.json` in the same directory as the executable/script.
+2. **Launch & Authenticate:**
+   Open the application in your browser (usually `http://127.0.0.1:8000`).
+   Click **Connect Google Account** to authorize the app. A `token.json` will be saved locally so you stay logged in.
+3. **Clean Your Drive:**
+   - **Duplicate Finder:** Finds and groups exact duplicates by MD5 hash and file size. You can optionally toggle "Require Exact File Name Match" if you only want to group files that share the exact same filename. Use the "Select All" / "Deselect All" shortcuts to quickly manage hundreds of duplicates.
+   - **Selective Deleter:** Mass delete files by name or MIME type category (e.g., delete all `Images`, or all files containing `temp`).
 
 ## CLI Usage (Command Line)
 
-You can use the `uv run` command to run the script. It automatically handles all Python packages for you.
-
-### 1. Duplicate Finder (Default Mode)
-Finds and deletes exact duplicate files across your Drive. It keeps the oldest file and deletes the rest.
+The backend engine (`gdrive_dedup.py`) can also be run entirely headlessly from the terminal for automation purposes.
 
 ```bash
 # Dry-run: Just print a report of duplicates and how much space you'll save
@@ -44,28 +40,20 @@ uv run python gdrive_dedup.py
 # Move all duplicates to the Google Drive Trash (Recoverable)
 uv run python gdrive_dedup.py --delete
 
-# Permanently purge duplicates from your drive (Irreversible)
-uv run python gdrive_dedup.py --purge
-```
-
-### 2. Selective Deleter Mode
-Search for specific files by name or type and mass-delete them. If you use `--names` or `--types`, duplicate detection is bypassed.
-
-```bash
-# Preview all files containing 'temp' or 'backup' in their name
+# Selective Delete: Preview all files containing 'temp' or 'backup' in their name
 uv run python gdrive_dedup.py --names "temp,backup"
 
-# Trash all images in your Drive
+# Selective Delete: Trash all images in your Drive
 uv run python gdrive_dedup.py --types "Images" --delete
-
-# Trash any videos or pdfs named 'draft'
-uv run python gdrive_dedup.py --names "draft" --types "Videos,application/pdf" --delete
 ```
 
-### Additional Flags
-- `--export-csv`: Generates a detailed CSV log of what was kept/deleted, including exact folder paths. (CSV is automatically generated when using `--delete` or `--purge`).
+### CLI Flags
+- `--delete`: Move files to the Google Drive Trash.
+- `--purge`: Permanently purge files from your drive (Irreversible).
+- `--export-csv`: Generates a detailed CSV log of what was kept/deleted, including exact folder paths.
 - `--shared-drives`: Includes files inside Google Shared Drives during the scan.
 
-## Features
-- **Crash-Proof**: Uses exponential backoff. If you have 500,000 files, it won't crash when Google limits the API rate.
-- **Path Resolution**: Caches folder structures so you see exactly where a file lives (e.g. `/Documents/Work/`).
+## Architecture Highlights
+- **Crash-Proof Engine**: Uses exponential backoff. If you have 500,000 files, it won't crash when Google rate-limits the API.
+- **Full Path Resolution**: Safely resolves nested directory structures so you know exactly which folder a duplicate lives in before deleting it.
+- **FastAPI Backend**: The app uses a fast async backend and serves a zero-dependency vanilla JS/CSS frontend.
