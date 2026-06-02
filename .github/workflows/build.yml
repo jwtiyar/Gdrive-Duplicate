@@ -1,0 +1,110 @@
+name: Build Releases
+
+on:
+  push:
+    branches: [ "master", "main" ]
+    tags:
+      - '*' # Trigger on any version tag
+  pull_request:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install uv
+      run: pip install uv
+        
+    - name: Install dependencies
+      run: uv pip install --system fastapi google-api-python-client google-auth-httplib2 google-auth-oauthlib python-dotenv uvicorn pytest httpx pyinstaller
+
+    - name: Inject Credentials into .env
+      run: |
+        echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+        echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
+      shell: bash
+
+    - name: Build with PyInstaller
+      run: pyinstaller --name DriveCleaner --add-data "static;static" --add-data ".env;." --onefile main.py
+
+    # -- OS SPECIFIC ARTIFACT HANDLING --
+    
+    - name: Rename Windows Executable
+      if: matrix.os == 'windows-latest'
+      run: mv dist/DriveCleaner.exe dist/DriveCleaner-Windows.exe
+      shell: bash
+
+    - name: Rename Linux Executable
+      if: matrix.os == 'ubuntu-latest'
+      run: mv dist/DriveCleaner dist/DriveCleaner-Linux
+      shell: bash
+
+    - name: Create Linux AppImage
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        mkdir -p AppDir/usr/bin
+        cp dist/DriveCleaner-Linux AppDir/usr/bin/DriveCleaner
+        
+        # Create Desktop file
+        cat > AppDir/DriveCleaner.desktop << 'EOF'
+        [Desktop Entry]
+        Name=DriveCleaner
+        Exec=DriveCleaner
+        Icon=utilities-terminal
+        Type=Application
+        Categories=Utility;
+        EOF
+        
+        # Create AppRun
+        cat > AppDir/AppRun << 'EOF'
+        #!/bin/sh
+        HERE="$(dirname "$(readlink -f "${0}")")"
+        exec "${HERE}/usr/bin/DriveCleaner" "$@"
+        EOF
+        chmod +x AppDir/AppRun
+        
+        # We need an icon file for AppImage to build
+        touch AppDir/utilities-terminal.png
+        
+        # Download appimagetool
+        wget -q -O appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+        chmod +x appimagetool
+        
+        # Build AppImage (extract-and-run handles environments where FUSE isn't available)
+        ARCH=x86_64 ./appimagetool --appimage-extract-and-run AppDir dist/DriveCleaner-x86_64.AppImage
+      shell: bash
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: DriveCleaner-Artifacts-${{ matrix.os }}
+        path: |
+          dist/DriveCleaner-Windows.exe
+          dist/DriveCleaner-Linux
+          dist/DriveCleaner-x86_64.AppImage
+        
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          dist/DriveCleaner-Windows.exe
+          dist/DriveCleaner-Linux
+          dist/DriveCleaner-x86_64.AppImage
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
