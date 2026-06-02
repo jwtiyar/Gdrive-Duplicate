@@ -211,10 +211,10 @@ def list_all_files(service, include_shared=False, progress_callback=None):
 
 
 # -- duplicate detection ------------------------------------------------------
-def find_duplicates(files):
+def find_duplicates(files, strict_name=False):
     """
-    Group files by (size, md5Checksum).
-    Files with the same content are duplicates regardless of name.
+    Group files by (size, md5Checksum) by default.
+    If strict_name is True, group by (size, md5Checksum, name).
     Files missing an md5Checksum are skipped entirely to avoid false positives.
     Returns only groups with 2+ members.
     """
@@ -228,7 +228,11 @@ def find_duplicates(files):
         size_raw = f.get("size")
         size     = int(size_raw) if size_raw else 0
 
-        groups[(size, md5)].append(f)
+        if strict_name:
+            name = f.get("name", "Unknown")
+            groups[(size, md5, name)].append(f)
+        else:
+            groups[(size, md5)].append(f)
 
     return {k: v for k, v in groups.items() if len(v) > 1}
 

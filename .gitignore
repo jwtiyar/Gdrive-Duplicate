@@ -5,4 +5,12 @@ credentials.json
 *.csv
 
 .env
-credentials.json
+
+# Build artifacts
+build/
+dist/
+DriveCleaner*
+*.spec
+
+# Caches
+.pytest_cache/

@@ -91,8 +91,6 @@ body {
 .max-width-md { max-width: 600px; }
 .max-width-sm { max-width: 450px; }
 .gap-sm { gap: 0.75rem; }
-.border-top { border-top: 1px solid rgba(255, 255, 255, 0.08); }
-
 .flex-row { display: flex; flex-direction: row; }
 .flex-justify-between { justify-content: space-between; }
 .flex-align-center { align-items: center; }
@@ -120,69 +118,6 @@ body {
   margin-bottom: 1.5rem;
 }
 
-/* ================= AUTHENTICATION VIEW ================= */
-.auth-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: 1.5rem;
-  z-index: 10;
-  position: relative;
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 440px;
-  padding: 3rem 2.5rem;
-}
-
-.auth-header {
-  text-align: center;
-  margin-bottom: 2.25rem;
-}
-
-.logo-icon-wrapper {
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
-  border: 1px solid var(--border-light);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1.25rem auto;
-}
-
-.logo-icon {
-  width: 32px;
-  height: 32px;
-  color: var(--primary);
-}
-
-.accent-glow {
-  filter: drop-shadow(0 0 8px var(--primary-glow));
-}
-
-.auth-title {
-  font-family: var(--font-title);
-  font-size: 2rem;
-  font-weight: 800;
-  letter-spacing: -0.025em;
-  background: linear-gradient(to right, #ffffff, #a5b4fc);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 0.35rem;
-}
-
-.auth-subtitle {
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-}
-
-.auth-form .form-group {
-  margin-bottom: 1.25rem;
-}
 
 .form-group label {
   display: block;
@@ -232,24 +167,6 @@ body {
   color: var(--primary);
 }
 
-.error-banner {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
-  font-size: 0.88rem;
-  color: #fca5a5;
-}
-
-.error-icon {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
 
 /* ================= BUTTONS ================= */
 .btn {
@@ -338,11 +255,6 @@ body {
   height: 16px;
 }
 
-.btn-icon-right {
-  margin-left: 0.5rem;
-  width: 16px;
-  height: 16px;
-}
 
 /* ================= APP SHELL LAYER ================= */
 .app-shell {
@@ -372,11 +284,6 @@ body {
   padding-left: 0.5rem;
 }
 
-.brand-icon {
-  width: 26px;
-  height: 26px;
-  color: var(--primary);
-}
 
 .brand-text {
   font-family: var(--font-title);
@@ -488,28 +395,6 @@ body {
   letter-spacing: -0.015em;
 }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.badge-demo {
-  background: rgba(139, 92, 246, 0.15);
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  color: #c084fc;
-}
-
-.badge-real {
-  background: rgba(20, 184, 166, 0.15);
-  border: 1px solid rgba(20, 184, 166, 0.3);
-  color: #2dd4bf;
-}
 
 /* ================= VIEW CONTENTS ================= */
 .view-pane {
@@ -523,7 +408,6 @@ body {
   margin-bottom: 1.25rem;
 }
 
-.my-md { margin-top: 1.5rem; margin-bottom: 1.5rem; }
 .text-center h3 {
   font-family: var(--font-title);
   font-size: 1.45rem;
@@ -930,10 +814,6 @@ body {
   height: 14px;
 }
 
-.border-top {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
 /* PREVIEW TABLE */
 .table-container {
   overflow-x: auto;
@@ -989,21 +869,6 @@ body {
 .status-indicator-icon.offline { color: var(--danger); }
 .status-indicator-icon.warning { color: #f59e0b; }
 
-.setup-steps {
-  padding-left: 1.25rem;
-}
-
-.setup-steps li {
-  margin-bottom: 0.75rem;
-}
-
-.accent-link {
-  color: var(--primary);
-  text-decoration: none;
-}
-.accent-link:hover {
-  text-decoration: underline;
-}
 
 /* ================= FULLSCREEN OVERLAY MODAL ================= */
 .fullscreen-overlay {
@@ -1082,10 +947,6 @@ dialog::backdrop {
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes animate-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
 
 @keyframes spinner-spin {
   0% { transform: rotate(0deg); }

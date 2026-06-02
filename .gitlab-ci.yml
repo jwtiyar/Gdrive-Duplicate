@@ -22,7 +22,7 @@ build-linux-binaries:
   stage: build
   image: python:3.11-slim
   script:
-    - apt-get update && apt-get install -y wget file
+    - apt-get update && apt-get install -y wget file binutils
     - pip install uv
     - uv pip install --system fastapi google-api-python-client google-auth-httplib2 google-auth-oauthlib python-dotenv uvicorn pyinstaller httpx pytest
     - echo "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" >> .env

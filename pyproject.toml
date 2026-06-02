@@ -1,7 +1,7 @@
 [project]
 name = "gdrive-duplicate"
 version = "0.1.0"
-description = "Add your description here"
+description = "A FastAPI application with a GUI to find and delete duplicate files in Google Drive."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [

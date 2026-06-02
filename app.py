@@ -29,7 +29,7 @@ import threading
 import webbrowser
 import json
 from typing import List, Optional
-from fastapi import FastAPI, BackgroundTasks, HTTPException, status
+from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from pydantic import BaseModel
@@ -41,25 +41,17 @@ import gdrive_dedup
 
 app = FastAPI(title="Google Drive Cleaner GUI")
 
-# -- Models -------------------------------------------------------------------
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-
 class ScanRequest(BaseModel):
     names: Optional[str] = None
     types: Optional[str] = None
     include_shared: bool = False
+    strict_name: bool = False
 
 class DeleteRequest(BaseModel):
     file_ids: List[str]
     purge: bool = False
 
-# -- Bundled Credentials for Customers ----------------------------------------
-from dotenv import load_dotenv
-import sys
-
-# In PyInstaller, bundled files are extracted to sys._MEIPASS
+from dotenv import load_dotenv# In PyInstaller, bundled files are extracted to sys._MEIPASS
 if getattr(sys, 'frozen', False):
     env_path = os.path.join(sys._MEIPASS, '.env')
 else:
@@ -124,20 +116,17 @@ delete_state = {
 # In-memory storage for scanned files list (needed to process deletions later)
 scanned_files_cache = []
 folder_cache_global = {}
-
-# Session state
-logged_in_users = set()
 active_oauth_flows = {}
 
 # -- Authentication Checkers -------------------------------------------------
 def is_credentials_present() -> bool:
-    return True
+    return os.path.exists(gdrive_dedup.CREDS_FILE)
 
 def is_token_present() -> bool:
     return os.path.exists(gdrive_dedup.TOKEN_FILE)
 
 # -- Background Scan Task (Real Mode) ----------------------------------------
-def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types_filter: Optional[str] = None):
+def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types_filter: Optional[str] = None, strict_name: bool = False):
     global scanned_files_cache, folder_cache_global
     scan_state["status"] = "scanning"
     scan_state["progress"] = {"scanned_count": 0, "page_num": 0, "folders_cached": 0}
@@ -188,7 +177,7 @@ def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types
             }
         else:
             # Prepare duplicates report structure
-            duplicate_groups = gdrive_dedup.find_duplicates(real_files)
+            duplicate_groups = gdrive_dedup.find_duplicates(real_files, strict_name=strict_name)
             
             # Format the duplicates into a JSON-serializable list
             formatted_groups = []
@@ -231,135 +220,7 @@ def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types
         scan_state["status"] = "error"
         scan_state["error"] = str(e)
 
-# -- Background Scan Task (Demo Mode) ----------------------------------------
-def bg_scan_demo(names_filter: Optional[str] = None, types_filter: Optional[str] = None):
-    global scanned_files_cache, folder_cache_global
-    scan_state["status"] = "scanning"
-    scan_state["error"] = None
-    scan_state["results"] = None
-    scan_state["mode"] = "demo"
 
-    # Simulate network delays and paging
-    steps = [
-        (352, 1, 15),
-        (721, 2, 38),
-        (1094, 3, 54),
-        (1245, 4, 62)
-    ]
-    
-    for scanned, pages, folders in steps:
-        time.sleep(0.5)
-        scan_state["progress"] = {
-            "scanned_count": scanned,
-            "page_num": pages,
-            "folders_cached": folders
-        }
-
-    # Generate Mock Folder Cache
-    folder_cache_global = {
-        "root": {"id": "root", "name": "My Drive", "parents": []},
-        "f1": {"id": "f1", "name": "Photos", "parents": ["root"]},
-        "f2": {"id": "f2", "name": "2025", "parents": ["f1"]},
-        "f3": {"id": "f3", "name": "Work", "parents": ["root"]},
-        "f4": {"id": "f4", "name": "Projects", "parents": ["f3"]},
-        "f5": {"id": "f5", "name": "Backups", "parents": ["root"]},
-        "f6": {"id": "f6", "name": "Videos", "parents": ["root"]},
-        "f7": {"id": "f7", "name": "Temp", "parents": ["root"]}
-    }
-
-    # Define standard mock files
-    mock_files = [
-        # Photo duplicates
-        {"id": "img1", "name": "DSC_0124.JPG", "size": 4404019, "md5Checksum": "ab81f729b71e1a8a25c192d192c719e0", "mimeType": "image/jpeg", "createdTime": "2025-06-15T12:00:00Z", "parents": ["f2"], "webViewLink": "#"},
-        {"id": "img1_d1", "name": "DSC_0124.JPG", "size": 4404019, "md5Checksum": "ab81f729b71e1a8a25c192d192c719e0", "mimeType": "image/jpeg", "createdTime": "2025-06-16T14:30:00Z", "parents": ["f5"], "webViewLink": "#"},
-        {"id": "img1_d2", "name": "DSC_0124.JPG", "size": 4404019, "md5Checksum": "ab81f729b71e1a8a25c192d192c719e0", "mimeType": "image/jpeg", "createdTime": "2026-01-10T09:15:00Z", "parents": ["root"], "webViewLink": "#"},
-        
-        # PPTX duplicates
-        {"id": "ppt1", "name": "Project_Presentation_Final_v2.pptx", "size": 19398656, "md5Checksum": "c89bfa81f1b0a88ef11b10b001a1c9e8", "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation", "createdTime": "2026-03-01T10:00:00Z", "parents": ["f4"], "webViewLink": "#"},
-        {"id": "ppt1_d1", "name": "Project_Presentation_Final_v2.pptx", "size": 19398656, "md5Checksum": "c89bfa81f1b0a88ef11b10b001a1c9e8", "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation", "createdTime": "2026-03-05T18:22:00Z", "parents": ["root"], "webViewLink": "#"},
-        
-        # Heavy Video duplicates
-        {"id": "vid1", "name": "vacation_video_draft.mp4", "size": 257744896, "md5Checksum": "fb12c8b749a1bc9a25b1fcd34d28e7e1", "mimeType": "video/mp4", "createdTime": "2025-08-20T11:00:00Z", "parents": ["f6"], "webViewLink": "#"},
-        {"id": "vid1_d1", "name": "vacation_video_draft.mp4", "size": 257744896, "md5Checksum": "fb12c8b749a1bc9a25b1fcd34d28e7e1", "mimeType": "video/mp4", "createdTime": "2025-08-22T08:00:00Z", "parents": ["f7"], "webViewLink": "#"},
-        
-        # Archive ZIP duplicates
-        {"id": "zip1", "name": "archive_backup_2025.zip", "size": 1288490188, "md5Checksum": "7a8b9c10d11e12f13a14b15c16d17e18", "mimeType": "application/zip", "createdTime": "2025-12-31T23:59:59Z", "parents": ["f5"], "webViewLink": "#"},
-        {"id": "zip1_d1", "name": "archive_backup_2025.zip", "size": 1288490188, "md5Checksum": "7a8b9c10d11e12f13a14b15c16d17e18", "mimeType": "application/zip", "createdTime": "2026-01-02T12:00:00Z", "parents": ["root"], "webViewLink": "#"},
-        
-        # Code file duplicates
-        {"id": "code1", "name": "style.css", "size": 12288, "md5Checksum": "3c9d8e7a6b5c4d3e2f1a0b9c8d7e6f5a", "mimeType": "text/css", "createdTime": "2026-05-30T10:00:00Z", "parents": ["f4"], "webViewLink": "#"},
-        {"id": "code1_d1", "name": "style.css", "size": 12288, "md5Checksum": "3c9d8e7a6b5c4d3e2f1a0b9c8d7e6f5a", "mimeType": "text/css", "createdTime": "2026-05-30T10:10:00Z", "parents": ["f5"], "webViewLink": "#"},
-        
-        # Extra non-duplicate files (for searching)
-        {"id": "extra1", "name": "temp_config.json", "size": 1224, "mimeType": "application/json", "createdTime": "2026-05-29T15:00:00Z", "parents": ["f7"], "webViewLink": "#"},
-        {"id": "extra2", "name": "test_script.py", "size": 4608, "mimeType": "text/x-python", "createdTime": "2026-05-28T09:30:00Z", "parents": ["f7"], "webViewLink": "#"},
-        {"id": "extra3", "name": "contacts_backup.vcf", "size": 122880, "mimeType": "text/vcard", "createdTime": "2026-05-20T10:00:00Z", "parents": ["f5"], "webViewLink": "#"}
-    ]
-    
-    scanned_files_cache = mock_files
-    
-    # Process scan depending on filters
-    is_selective = bool(names_filter or types_filter)
-    
-    if is_selective:
-        name_patterns = [p.strip() for p in names_filter.split(",")] if names_filter else []
-        mime_types = [p.strip() for p in types_filter.split(",")] if types_filter else []
-        
-        filtered = gdrive_dedup.filter_files(mock_files, name_patterns, mime_types)
-        formatted_files = []
-        path_memo = {}
-        for item in filtered:
-            path = gdrive_dedup.resolve_file_path(item, folder_cache_global, path_memo)
-            formatted_files.append({
-                "id": item["id"],
-                "name": item.get("name", "Unknown"),
-                "path": path,
-                "size": int(item.get("size", 0)),
-                "mimeType": item.get("mimeType", "Unknown"),
-                "createdTime": item.get("createdTime", "Unknown")
-            })
-        scan_state["results"] = {
-            "files": formatted_files,
-            "total_files": len(mock_files)
-        }
-    else:
-        # Group duplicates
-        duplicate_groups = gdrive_dedup.find_duplicates(mock_files)
-        formatted_groups = []
-        path_memo = {}
-        
-        for (size, md5), copies in sorted(duplicate_groups.items(), key=lambda x: x[1][0].get("name", "").lower()):
-            copies_sorted = sorted(copies, key=lambda f: f.get("createdTime", ""))
-            keeper = copies_sorted[0]
-            group_name = keeper.get("name", "Unknown")
-            
-            group_copies = []
-            for item in copies_sorted:
-                path = gdrive_dedup.resolve_file_path(item, folder_cache_global, path_memo)
-                group_copies.append({
-                    "id": item["id"],
-                    "name": item.get("name", "Unknown"),
-                    "path": path,
-                    "size": int(item.get("size", 0)),
-                    "md5": item.get("md5Checksum"),
-                    "createdTime": item.get("createdTime", "Unknown"),
-                    "webViewLink": item.get("webViewLink", ""),
-                    "isKeeper": item["id"] == keeper["id"]
-                })
-            
-            formatted_groups.append({
-                "name": group_name,
-                "size": size,
-                "md5": md5,
-                "copies": group_copies
-            })
-            
-        scan_state["results"] = {
-            "duplicates": formatted_groups,
-            "total_files": len(mock_files)
-        }
-
-    scan_state["status"] = "completed"
 
 # -- Background Deletion Task (Real Mode) -------------------------------------
 def bg_delete_real(file_ids: List[str], purge: bool):
@@ -395,62 +256,8 @@ def bg_delete_real(file_ids: List[str], purge: bool):
         delete_state["status"] = "error"
         delete_state["error"] = str(e)
 
-# -- Background Deletion Task (Demo Mode) -------------------------------------
-def bg_delete_demo(file_ids: List[str]):
-    delete_state["status"] = "deleting"
-    delete_state["error"] = None
-    
-    total = len(file_ids)
-    success = 0
-    failed = 0
-    actual_bytes = 0
-
-    delete_state["progress"] = {
-        "current": 0,
-        "total": total,
-        "success": 0,
-        "failed": 0,
-        "actual_bytes": 0
-    }
-
-    for i, fid in enumerate(file_ids, 1):
-        time.sleep(0.4) # Simulate network delete time
-        
-        found_file = next((f for f in scanned_files_cache if f["id"] == fid), None)
-        size = int(found_file.get("size", 0)) if found_file else 0
-        
-        success += 1
-        actual_bytes += size
-        
-        delete_state["progress"] = {
-            "current": i,
-            "total": total,
-            "success": success,
-            "failed": failed,
-            "actual_bytes": actual_bytes
-        }
-
-    delete_state["status"] = "completed"
-
-# -- OAuth Thread -------------------------------------------------------------
-def trigger_google_auth():
-    try:
-        gdrive_dedup.authenticate()
-    except Exception as e:
-        print(f"Error authenticating: {e}")
 
 # -- API Routes ---------------------------------------------------------------
-@app.post("/api/login")
-def api_login(req: LoginRequest):
-    # Simple hardcoded user validation as requested
-    if req.username == "admin" and req.password == "password":
-        logged_in_users.add("admin-session")
-        return {"token": "admin-session"}
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Incorrect username or password"
-    )
-
 @app.get("/api/auth/status")
 def api_auth_status():
     creds_exist = is_credentials_present()
@@ -548,10 +355,9 @@ def api_start_scan(req: ScanRequest, background_tasks: BackgroundTasks):
         # Check if token is ready before scanning in Real Mode
         if not is_token_present():
             raise HTTPException(status_code=400, detail="Google authentication required.")
-        background_tasks.add_task(bg_scan_real, req.include_shared, req.names, req.types)
+        background_tasks.add_task(bg_scan_real, req.include_shared, req.names, req.types, req.strict_name)
     else:
-        # Fallback to Demo Mode
-        background_tasks.add_task(bg_scan_demo, req.names, req.types)
+        raise HTTPException(status_code=400, detail="Credentials not found.")
         
     return {"status": "started"}
 
@@ -571,8 +377,7 @@ def api_start_delete(req: DeleteRequest, background_tasks: BackgroundTasks):
             raise HTTPException(status_code=400, detail="Google authentication required.")
         background_tasks.add_task(bg_delete_real, req.file_ids, req.purge)
     else:
-        # Demo Mode simulation
-        background_tasks.add_task(bg_delete_demo, req.file_ids)
+        raise HTTPException(status_code=400, detail="Credentials not found.")
         
     return {"status": "started"}
 

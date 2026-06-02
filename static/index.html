@@ -16,49 +16,8 @@
 </head>
 <body>
 
-  <!-- ================= AUTH CONTAINER ================= -->
-  <main id="auth-container" class="auth-wrapper">
-    <div class="auth-card glass-panel animate-fade-in">
-      <div class="auth-header">
-        <div class="logo-icon-wrapper">
-          <img src="/static/logo.png" alt="Drive Cleaner Logo" style="width: 64px; height: 64px; border-radius: 12px; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(0,255,255,0.2);">
-        </div>
-        <h1 class="auth-title">Drive Cleaner</h1>
-        <p class="auth-subtitle">Login to access your local file cleanup utility</p>
-      </div>
-
-      <form id="login-form" class="auth-form">
-        <div class="form-group">
-          <label for="username">Username</label>
-          <div class="input-wrapper">
-            <i data-lucide="user" class="input-icon"></i>
-            <input type="text" id="username" name="username" required placeholder="admin" autocomplete="username">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="password">Password</label>
-          <div class="input-wrapper">
-            <i data-lucide="lock" class="input-icon"></i>
-            <input type="password" id="password" name="password" required placeholder="••••••••" autocomplete="current-password">
-          </div>
-        </div>
-
-        <div id="login-error" class="error-banner hidden" role="alert">
-          <i data-lucide="alert-circle" class="error-icon"></i>
-          <span id="login-error-msg">Invalid credentials. Please try again.</span>
-        </div>
-
-        <button type="submit" id="btn-login" class="btn btn-primary btn-block">
-          <span>Sign In</span>
-          <i data-lucide="arrow-right" class="btn-icon-right"></i>
-        </button>
-      </form>
-    </div>
-  </main>
-
   <!-- ================= APP CONTAINER ================= -->
-  <div id="app-container" class="app-shell hidden">
+  <div id="app-container" class="app-shell">
     
     <!-- SIDEBAR -->
     <aside id="app-sidebar" class="sidebar">
@@ -109,7 +68,6 @@
       <header class="topbar">
         <h2 id="view-title" class="page-title">Duplicate Finder</h2>
         <div class="topbar-actions">
-          <div id="mode-badge" class="badge badge-demo">Demo Mode</div>
         </div>
       </header>
 
@@ -129,6 +87,11 @@
               <input type="checkbox" id="dedup-shared-drives">
               <span class="checkmark"></span>
               <span class="label-text">Include Shared Drives in Scan</span>
+            </label>
+            <label class="checkbox-container mx-auto mt-sm">
+              <input type="checkbox" id="dedup-strict-name">
+              <span class="checkmark"></span>
+              <span class="label-text" style="text-align: left;">Require exact file name match<br><small class="text-secondary" style="font-weight:normal;">If checked, it ignores duplicates that have different names (like "Copy of video.mp4")</small></span>
             </label>
           </div>
 
@@ -190,8 +153,8 @@
               <input type="text" id="dedup-search-input" placeholder="Search duplicates by name...">
             </div>
             <div class="selection-shortcuts">
-              <button id="btn-select-all-dupes" class="btn btn-text btn-sm">Select All Duplicates</button>
-              <button id="btn-deselect-all-dupes" class="btn btn-text btn-sm">Keep All Files</button>
+              <button id="btn-select-all-dupes" class="btn btn-text btn-sm">Select All</button>
+              <button id="btn-deselect-all-dupes" class="btn btn-text btn-sm">Deselect All</button>
             </div>
           </div>
 
@@ -369,7 +332,7 @@
 
       <!-- RUNNING DELETION PROGRESS CARD -->
       <div id="deletion-progress-overlay" class="fullscreen-overlay hidden">
-        <div class="glass-panel modal-card p-lg text-center animate-zoom-in">
+        <div class="glass-panel modal-card p-lg text-center">
           <div class="spinner-wrapper">
             <div class="double-bounce-spinner danger-spinner"></div>
             <i data-lucide="trash-2" class="spinner-center-icon text-danger"></i>

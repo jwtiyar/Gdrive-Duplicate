@@ -1,5 +1,4 @@
 // ================= GLOBAL STATE =================
-let sessionToken = 'admin-session';
 let connectionMode = 'demo'; // 'demo' or 'real'
 let authStatus = { credentials_exist: false, token_active: false };
 let scanPollInterval = null;
@@ -16,125 +15,41 @@ let selectedSelectiveMimeCategories = new Set();
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
-  initAuth();
   initNavigation();
-  initSettings();
   initDeduplicator();
   initSelectiveDeleter();
   initDialogs();
   
   // Refresh Lucide Icons once page is structured
   lucide.createIcons();
+  checkConnectionStatus();
 });
-
-// ================= AUTHENTICATION LOGIC =================
-function initAuth() {
-  const loginForm = document.getElementById('login-form');
-  const loginError = document.getElementById('login-error');
-  const loginErrorMsg = document.getElementById('login-error-msg');
-  const btnLogout = document.getElementById('btn-logout');
-
-  // Verify stored session token
-  if (sessionToken) {
-    showApp();
-    checkConnectionStatus();
-  } else {
-    showLogin();
-  }
-
-  // Handle Login submission
-  loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    loginError.classList.add('hidden');
-
-    const usernameVal = document.getElementById('username').value;
-    const passwordVal = document.getElementById('password').value;
-
-    try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: usernameVal, password: passwordVal })
-      });
-
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.detail || 'Login failed');
-      }
-
-      const data = await response.json();
-      sessionToken = data.token;
-      localStorage.setItem('session-token', sessionToken);
-      
-      showApp();
-      checkConnectionStatus();
-    } catch (err) {
-      loginErrorMsg.textContent = err.message;
-      loginError.classList.remove('hidden');
-    }
-  });
-
-  // Handle Logout
-  if (btnLogout) {
-    btnLogout.addEventListener('click', async () => {
-      try {
-        await fetch('/api/auth/logout', { method: 'POST' });
-      } catch (err) {
-        console.error('Logout error on server:', err);
-      }
-      
-      sessionToken = null;
-      localStorage.removeItem('session-token');
-      showLogin();
-      
-      // Reset state
-      clearInterval(scanPollInterval);
-      clearInterval(deletePollInterval);
-    });
-  }
-}
-
-function showLogin() {
-  document.getElementById('auth-container').classList.remove('hidden');
-  document.getElementById('app-container').classList.add('hidden');
-}
-
-function showApp() {
-  document.getElementById('auth-container').classList.add('hidden');
-  document.getElementById('app-container').classList.remove('hidden');
-}
 
 // ================= SYSTEM CONNECTION STATUS =================
 async function checkConnectionStatus() {
   const statusDot = document.getElementById('sidebar-indicator-dot');
   const statusText = document.getElementById('sidebar-status-text');
-  const modeBadge = document.getElementById('mode-badge');
 
   try {
     const response = await fetch('/api/auth/status');
     const data = await response.json();
     authStatus = data;
-    connectionMode = data.mode;
-
+    
     statusDot.className = 'status-indicator-dot';
     
-    if (connectionMode === 'real') {
+    if (data.mode === 'real') {
+      connectionMode = 'real';
       if (data.token_active) {
         statusDot.classList.add('online');
         statusText.textContent = 'Google Connected';
-        modeBadge.textContent = 'Real Mode';
-        modeBadge.className = 'badge badge-real';
       } else {
         statusDot.classList.add('offline');
         statusText.textContent = 'Account Link Required';
-        modeBadge.textContent = 'Real Mode';
-        modeBadge.className = 'badge badge-real';
       }
     } else {
+      connectionMode = 'demo';
       statusDot.classList.add('demo');
       statusText.textContent = 'Demo Mode Active';
-      modeBadge.textContent = 'Demo Mode';
-      modeBadge.className = 'badge badge-demo';
     }
     
     // Update settings view dynamically if settings is loaded
@@ -207,18 +122,21 @@ function initDeduplicator() {
   const btnDeselectAll = document.getElementById('btn-deselect-all-dupes');
 
   btnStartScan.addEventListener('click', async () => {
-    const includeShared = document.getElementById('dedup-shared-drives').checked;
-    
     dedupSetupCard.classList.add('hidden');
     dedupResultsPanel.classList.add('hidden');
     scanProgressCard.classList.remove('hidden');
     
-    // Start scan on server
+    const includeShared = document.getElementById('dedup-shared-drives').checked;
+    const strictName = document.getElementById('dedup-strict-name').checked;
+
     try {
       const response = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ include_shared: includeShared })
+        body: JSON.stringify({ 
+          include_shared: includeShared,
+          strict_name: strictName
+        })
       });
       
       if (!response.ok) {
@@ -854,10 +772,6 @@ async function handleDisconnectGoogle() {
       showToast(`Error disconnecting: ${err.message}`);
     }
   }
-}
-
-function initSettings() {
-  // Credentials are now bundled in the application code
 }
 
 // ================= DELETION CONFIRMATION & DIALOGS =================
