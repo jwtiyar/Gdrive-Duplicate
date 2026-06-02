@@ -604,6 +604,8 @@ def main():
     # Selective arguments
     parser.add_argument("--names", type=str, help="Comma-separated search terms for selective deletion.")
     parser.add_argument("--types", type=str, help="Comma-separated MIME types or categories (e.g. 'Images').")
+    parser.add_argument("--min-size-mb", type=float, help="Minimum file size in MB for selective deletion.")
+    parser.add_argument("--max-size-mb", type=float, help="Maximum file size in MB for selective deletion.")
 
     args = parser.parse_args()
 
@@ -616,14 +618,20 @@ def main():
         print("No files found. Nothing to do.")
         return
 
-    is_selective = bool(args.names or args.types)
+    is_selective = bool(args.names or args.types or args.min_size_mb is not None or args.max_size_mb is not None)
     path_memo = {}
 
     if is_selective:
         name_patterns = [p.strip() for p in args.names.split(",")] if args.names else []
         mime_types    = [p.strip() for p in args.types.split(",")] if args.types else []
         
-        filtered_files = filter_files(all_files, name_patterns, mime_types)
+        filtered_files = filter_files(
+            all_files, 
+            name_patterns, 
+            mime_types, 
+            min_size_mb=args.min_size_mb, 
+            max_size_mb=args.max_size_mb
+        )
         if not filtered_files:
             print("No files matched your filters.")
             return
@@ -660,16 +668,23 @@ def main():
         print("Aborted. Nothing was deleted.")
         return
 
+    import datetime
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_filename = f"deletion_history_{timestamp}.txt"
+    log_path = os.path.abspath(log_filename)
+
     print(f"\n{'Purging' if args.purge else 'Trashing'} {len(files_to_delete_for_action):,} files...\n")
     if args.purge:
-        ok, fail, actual_bytes = purge_files(service, files_to_delete_for_action)
+        ok, fail, actual_bytes = purge_files(service, files_to_delete_for_action, log_path=log_path)
     else:
-        ok, fail, actual_bytes = trash_files(service, files_to_delete_for_action)
+        ok, fail, actual_bytes = trash_files(service, files_to_delete_for_action, log_path=log_path)
 
     print()
     print("=" * 70)
     print(f"  Done.  {ok:,} deleted   {fail:,} failed")
     print(f"  Actual space reclaimed: {bytes_human(actual_bytes)}")
+    if ok > 0:
+        print(f"  Deletion history log saved to: {log_path}")
     print("=" * 70 + "\n")
 
 

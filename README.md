@@ -27,7 +27,9 @@ This tool uses `uv` for fast dependency management.
    Click **Connect Google Account** to authorize the app. A `token.json` will be saved locally so you stay logged in.
 3. **Clean Your Drive:**
    - **Duplicate Finder:** Finds and groups exact duplicates by MD5 hash and file size. You can optionally toggle "Require Exact File Name Match" if you only want to group files that share the exact same filename. Use the "Select All" / "Deselect All" shortcuts to quickly manage hundreds of duplicates.
-   - **Selective Deleter:** Mass delete files by name or MIME type category (e.g., delete all `Images`, or all files containing `temp`).
+    - **Selective Deleter:** Mass delete files by name, MIME type category (e.g., delete all `Images`, or all files containing `temp`), or file size boundaries (e.g., minimum/maximum size in MB).
+4. **Deletion Logs:**
+   Every deletion run (in both GUI and CLI modes) generates a local, timestamped log file (e.g., `deletion_history_20260602_153000.txt`) listing all successfully processed files, their Google Drive ID, and their sizes for safety and auditing.
 
 ## CLI Usage (Command Line)
 
@@ -45,6 +47,9 @@ uv run python gdrive_dedup.py --names "temp,backup"
 
 # Selective Delete: Trash all images in your Drive
 uv run python gdrive_dedup.py --types "Images" --delete
+
+# Selective Delete: Trash all files larger than 100 MB and smaller than 500 MB
+uv run python gdrive_dedup.py --min-size-mb 100 --max-size-mb 500 --delete
 ```
 
 ### CLI Flags
@@ -52,6 +57,8 @@ uv run python gdrive_dedup.py --types "Images" --delete
 - `--purge`: Permanently purge files from your drive (Irreversible).
 - `--export-csv`: Generates a detailed CSV log of what was kept/deleted, including exact folder paths.
 - `--shared-drives`: Includes files inside Google Shared Drives during the scan.
+- `--min-size-mb`: Minimum file size in MB for selective filtering.
+- `--max-size-mb`: Maximum file size in MB for selective filtering.
 
 ## Architecture Highlights
 - **Crash-Proof Engine**: Uses exponential backoff. If you have 500,000 files, it won't crash when Google rate-limits the API.
