@@ -9,7 +9,7 @@ from unittest.mock import patch
 client = TestClient(app)
 
 @patch('app.is_credentials_present', return_value=False)
-def test_auth_status_no_creds(mock_creds):
+def test_auth_status_no_creds(_mock_creds):
     # If credentials.json is not found (which it shouldn't be in a clean test env)
     # The app should correctly report missing credentials
     response = client.get("/api/auth/status")
@@ -18,7 +18,7 @@ def test_auth_status_no_creds(mock_creds):
     assert data["credentials_exist"] is False
 
 @patch('app.is_token_present', return_value=False)
-def test_scan_unauthorized(mock_token_present):
+def test_scan_unauthorized(_mock_token_present):
     # Hitting scan without a valid Google token should return 400 Bad Request
     response = client.post("/api/scan", json={"include_shared": False})
     assert response.status_code == 400

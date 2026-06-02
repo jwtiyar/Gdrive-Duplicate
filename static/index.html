@@ -67,8 +67,6 @@
       <!-- TOP STATUS BAR -->
       <header class="topbar">
         <h2 id="view-title" class="page-title">Duplicate Finder</h2>
-        <div class="topbar-actions">
-        </div>
       </header>
 
       <!-- VIEW: DEDUPLICATOR -->
@@ -76,13 +74,13 @@
         
         <!-- INITIAL DISCONNECTED / EMPTY STATE -->
         <div id="dedup-setup-card" class="glass-panel card p-lg text-center">
-          <i data-lucide="copy-check" class="card-hero-icon accent-glow"></i>
+          <i data-lucide="copy-check" class="card-hero-icon"></i>
           <h3>Scan for Duplicate Files</h3>
           <p class="text-secondary max-width-md mx-auto">
             Our engine groups files by file size and exact MD5 checksum to find hidden duplicates even if they were renamed. We automatically mark duplicate copies for deletion while keeping the oldest original safe.
           </p>
           
-          <div class="scan-options my-md">
+          <div class="my-md">
             <label class="checkbox-container mx-auto">
               <input type="checkbox" id="dedup-shared-drives">
               <span class="checkmark"></span>
@@ -91,7 +89,7 @@
             <label class="checkbox-container mx-auto mt-sm">
               <input type="checkbox" id="dedup-strict-name">
               <span class="checkmark"></span>
-              <span class="label-text" style="text-align: left;">Require exact file name match<br><small class="text-secondary" style="font-weight:normal;">If checked, it ignores duplicates that have different names (like "Copy of video.mp4")</small></span>
+              <span style="text-align: left;">Require exact file name match<br><small class="text-secondary" style="font-weight:normal;">If checked, it ignores duplicates that have different names (like "Copy of video.mp4")</small></span>
             </label>
           </div>
 
@@ -169,12 +167,6 @@
 
       <!-- VIEW: SELECTIVE DELETER -->
       <section id="view-selective-content" class="view-pane hidden">
-        
-        <!-- Filter Criteria Panel -->
-        <div class="glass-panel card p-md mb-md" id="selective-filter-card">
-          <h3>Selective Deletion Filters</h3>
-          <p class="text-secondary">Search for specific file patterns and categories to perform bulk trashing.</p>
-        </div>
 
         <!-- SELECTIVE PROGRESS CARD -->
         <div id="selective-progress-card" class="glass-panel card p-lg text-center hidden" style="margin-bottom: 1.5rem;">
@@ -209,7 +201,7 @@
 
             <div class="form-group">
               <label>MIME Types & Categories</label>
-              <div class="mime-pills-container" id="mime-pills-list">
+              <div class="mime-pills-container">
                 <button type="button" class="mime-pill" data-category="Images">
                   <i data-lucide="image" class="pill-icon"></i>
                   <span>Images</span>
@@ -358,7 +350,7 @@
   <!-- ================= CONFIRMATION DIALOG ================= -->
   <!-- Dialog box supporting light-dismiss closedby="any" -->
   <dialog id="confirm-delete-dialog" closedby="any" class="glass-panel modal-dialog text-center p-lg">
-    <form method="dialog" class="dialog-form">
+    <form method="dialog">
       <div class="dialog-icon-wrapper danger-alert">
         <i data-lucide="shield-alert" class="dialog-icon text-danger"></i>
       </div>

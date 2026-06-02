@@ -51,7 +51,8 @@ class DeleteRequest(BaseModel):
     file_ids: List[str]
     purge: bool = False
 
-from dotenv import load_dotenv# In PyInstaller, bundled files are extracted to sys._MEIPASS
+# In PyInstaller, bundled files are extracted to sys._MEIPASS
+from dotenv import load_dotenv
 if getattr(sys, 'frozen', False):
     env_path = os.path.join(sys._MEIPASS, '.env')
 else:
@@ -132,7 +133,6 @@ def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types
     scan_state["progress"] = {"scanned_count": 0, "page_num": 0, "folders_cached": 0}
     scan_state["error"] = None
     scan_state["results"] = None
-    scan_state["mode"] = "real"
 
     def progress_callback(scanned, pages, folders):
         scan_state["progress"] = {

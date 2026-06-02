@@ -1,3 +1,10 @@
+
+function updateScanProgressUI(progress, fileStatElem, folderStatElem, progressBarElem) {
+  fileStatElem.textContent = `Scanned: ${progress.scanned_count.toLocaleString()} files`;
+  folderStatElem.textContent = `Cached: ${progress.folders_cached.toLocaleString()} folders`;
+  let percent = Math.min(95, (progress.page_num * 25));
+  progressBarElem.style.width = `${percent}%`;
+}
 // ================= GLOBAL STATE =================
 let connectionMode = 'demo'; // 'demo' or 'real'
 let authStatus = { credentials_exist: false, token_active: false };
@@ -243,13 +250,7 @@ async function pollScanStatus() {
     const data = await response.json();
 
     if (data.status === 'scanning') {
-      const progress = data.progress;
-      fileStat.textContent = `Scanned: ${progress.scanned_count.toLocaleString()} files`;
-      folderStat.textContent = `Cached: ${progress.folders_cached.toLocaleString()} folders`;
-      
-      // Calculate a pseudo progress based on file/page numbers (up to 95% until completed)
-      let percent = Math.min(95, (progress.page_num * 25));
-      progressBar.style.width = `${percent}%`;
+      updateScanProgressUI(data.progress, fileStat, folderStat, progressBar);
     } 
     else if (data.status === 'completed') {
       clearInterval(scanPollInterval);
@@ -313,7 +314,7 @@ function renderDuplicatesList() {
     
 
     const copiesCount = group.copies.length;
-    const deletableCount = copiesCount - 1;
+
 
     // Header HTML
     groupElement.innerHTML = `
@@ -557,12 +558,7 @@ async function pollSelectiveScanStatus() {
     const data = await response.json();
 
     if (data.status === 'scanning') {
-      const progress = data.progress;
-      fileStat.textContent = `Scanned: ${progress.scanned_count.toLocaleString()} files`;
-      folderStat.textContent = `Cached: ${progress.folders_cached.toLocaleString()} folders`;
-      
-      let percent = Math.min(95, (progress.page_num * 25));
-      progressBar.style.width = `${percent}%`;
+      updateScanProgressUI(data.progress, fileStat, folderStat, progressBar);
     } 
     else if (data.status === 'completed') {
       clearInterval(scanPollInterval);
@@ -924,7 +920,7 @@ async function pollDeleteStatus() {
       
       setTimeout(() => {
         overlay.classList.add('hidden');
-        showToast('Cleanup completed successfully!');
+        showToast('Cleanup completed successfully!', 'success');
         
         // Return to setup / reset layout
         resetAppWorkflowState();
@@ -980,10 +976,6 @@ function showToast(message, type = 'error') {
   const container = document.getElementById('toast-container');
   if (!container) return;
   
-  if (message.includes('success')) {
-      type = 'success';
-  }
-
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   
