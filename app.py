@@ -118,6 +118,7 @@ delete_state = {
 scanned_files_cache = []
 folder_cache_global = {}
 active_oauth_flows = {}
+scan_cancelled = False
 
 # -- Authentication Checkers -------------------------------------------------
 def is_credentials_present() -> bool:
@@ -128,7 +129,8 @@ def is_token_present() -> bool:
 
 # -- Background Scan Task (Real Mode) ----------------------------------------
 def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types_filter: Optional[str] = None, strict_name: bool = False):
-    global scanned_files_cache, folder_cache_global
+    global scanned_files_cache, folder_cache_global, scan_cancelled
+    scan_cancelled = False
     scan_state["status"] = "scanning"
     scan_state["progress"] = {"scanned_count": 0, "page_num": 0, "folders_cached": 0}
     scan_state["error"] = None
@@ -146,7 +148,8 @@ def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types
         real_files, folders = gdrive_dedup.list_all_files(
             service, 
             include_shared=include_shared, 
-            progress_callback=progress_callback
+            progress_callback=progress_callback,
+            cancel_check=lambda: scan_cancelled
         )
         
         scanned_files_cache = real_files
@@ -218,6 +221,9 @@ def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types
             
         scan_state["status"] = "completed"
         
+    except InterruptedError:
+        scan_state["status"] = "cancelled"
+        scan_state["error"] = "Scan was cancelled by user."
     except Exception as e:
         scan_state["status"] = "error"
         scan_state["error"] = str(e)
@@ -366,6 +372,14 @@ def api_start_scan(req: ScanRequest, background_tasks: BackgroundTasks):
 @app.get("/api/scan/status")
 def api_scan_status():
     return scan_state
+
+@app.post("/api/scan/cancel")
+def api_cancel_scan():
+    global scan_cancelled
+    if scan_state["status"] != "scanning":
+        return {"status": "not_scanning"}
+    scan_cancelled = True
+    return {"status": "cancelling"}
 
 @app.post("/api/delete")
 def api_start_delete(req: DeleteRequest, background_tasks: BackgroundTasks):

@@ -118,7 +118,7 @@ def authenticate():
 
 
 # -- file listing -------------------------------------------------------------
-def list_all_files(service, include_shared=False, progress_callback=None):
+def list_all_files(service, include_shared=False, progress_callback=None, cancel_check=None):
     """
     Page through the entire Drive and return:
       - real_files : list of non-trashed, non-Google-native file dicts
@@ -141,6 +141,10 @@ def list_all_files(service, include_shared=False, progress_callback=None):
     print("Scanning Google Drive...", end="", flush=True)
 
     while True:
+        # Check for cancellation before each page fetch
+        if cancel_check and cancel_check():
+            raise InterruptedError("Scan cancelled by user.")
+
         params = {
             "pageSize": PAGE_SIZE,
             "fields":   fields,

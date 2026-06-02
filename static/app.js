@@ -167,6 +167,20 @@ function initDeduplicator() {
     });
   }
 
+  // Cancel Scan
+  const btnCancelScan = document.getElementById('btn-cancel-scan');
+  if (btnCancelScan) {
+    btnCancelScan.addEventListener('click', async () => {
+      btnCancelScan.disabled = true;
+      btnCancelScan.textContent = 'Stopping...';
+      try {
+        await fetch('/api/scan/cancel', { method: 'POST' });
+      } catch (err) {
+        console.error('Error cancelling scan:', err);
+      }
+    });
+  }
+
   // Export CSV
   btnExportCsv.addEventListener('click', () => {
     if (!scanResults || !scanResults.duplicates) return;
@@ -286,11 +300,25 @@ async function pollScanStatus() {
         updateDupeCheckboxesAndLabels();
       }, 500);
     } 
+    else if (data.status === 'cancelled') {
+      clearInterval(scanPollInterval);
+      showToast('Scan cancelled.');
+      document.getElementById('dedup-setup-card').classList.remove('hidden');
+      scanProgressCard.classList.add('hidden');
+      const cancelBtn = document.getElementById('btn-cancel-scan');
+      cancelBtn.disabled = false;
+      cancelBtn.innerHTML = '<i data-lucide="square" style="width:16px;height:16px;"></i> Stop Scan';
+      lucide.createIcons();
+    }
     else if (data.status === 'error') {
       clearInterval(scanPollInterval);
       showToast(`Scan failed: ${data.error}`);
       document.getElementById('dedup-setup-card').classList.remove('hidden');
       scanProgressCard.classList.add('hidden');
+      const cancelBtn = document.getElementById('btn-cancel-scan');
+      cancelBtn.disabled = false;
+      cancelBtn.innerHTML = '<i data-lucide="square" style="width:16px;height:16px;"></i> Stop Scan';
+      lucide.createIcons();
     }
   } catch (err) {
     console.error('Error polling scan status:', err);
@@ -517,6 +545,20 @@ function initSelectiveDeleter() {
     });
   }
 
+  // Cancel Selective Scan
+  const btnCancelSelectiveScan = document.getElementById('btn-cancel-selective-scan');
+  if (btnCancelSelectiveScan) {
+    btnCancelSelectiveScan.addEventListener('click', async () => {
+      btnCancelSelectiveScan.disabled = true;
+      btnCancelSelectiveScan.textContent = 'Stopping...';
+      try {
+        await fetch('/api/scan/cancel', { method: 'POST' });
+      } catch (err) {
+        console.error('Error cancelling scan:', err);
+      }
+    });
+  }
+
   // Select/Deselect shortcuts for table rows
   btnSelectiveSelectAll.addEventListener('click', () => {
     if (!selectiveResults || !selectiveResults.files) return;
@@ -591,12 +633,27 @@ async function pollSelectiveScanStatus() {
         updateSelectiveCheckboxes();
       }, 500);
     } 
+    else if (data.status === 'cancelled') {
+      clearInterval(scanPollInterval);
+      showToast('Scan cancelled.');
+      selectiveProgressCard.classList.add('hidden');
+      selectiveFilterCard.classList.remove('hidden');
+      selectiveFilterForm.parentElement.classList.remove('hidden');
+      const cancelBtn = document.getElementById('btn-cancel-selective-scan');
+      cancelBtn.disabled = false;
+      cancelBtn.innerHTML = '<i data-lucide="square" style="width:16px;height:16px;"></i> Stop Scan';
+      lucide.createIcons();
+    }
     else if (data.status === 'error') {
       clearInterval(scanPollInterval);
       showToast(`Search failed: ${data.error}`);
       selectiveProgressCard.classList.add('hidden');
       selectiveFilterCard.classList.remove('hidden');
       selectiveFilterForm.parentElement.classList.remove('hidden');
+      const cancelBtn = document.getElementById('btn-cancel-selective-scan');
+      cancelBtn.disabled = false;
+      cancelBtn.innerHTML = '<i data-lucide="square" style="width:16px;height:16px;"></i> Stop Scan';
+      lucide.createIcons();
     }
   } catch (err) {
     console.error('Error polling selective scan status:', err);

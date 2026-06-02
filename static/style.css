@@ -221,6 +221,18 @@ body {
   border-color: var(--primary);
 }
 
+.btn-outline.btn-danger {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
+  box-shadow: none;
+}
+
+.btn-outline.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: var(--danger);
+}
+
 .btn-text {
   background: transparent;
   color: var(--primary);

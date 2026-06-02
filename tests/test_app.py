@@ -24,3 +24,22 @@ def test_scan_unauthorized(_mock_token_present):
     assert response.status_code == 400
     assert "Google authentication required" in response.json()["detail"] or "Credentials not found" in response.json()["detail"]
 
+
+def test_scan_cancel_endpoint():
+    # First, make sure scan_state is not "scanning"
+    from app import scan_state
+    scan_state["status"] = "idle"
+    
+    # Try cancelling when not scanning
+    response = client.post("/api/scan/cancel")
+    assert response.status_code == 200
+    assert response.json()["status"] == "not_scanning"
+    
+    # Try cancelling when scanning
+    scan_state["status"] = "scanning"
+    response = client.post("/api/scan/cancel")
+    assert response.status_code == 200
+    assert response.json()["status"] == "cancelling"
+    
+    # Restore status to idle
+    scan_state["status"] = "idle"
