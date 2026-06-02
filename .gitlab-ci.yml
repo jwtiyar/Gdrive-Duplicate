@@ -13,7 +13,7 @@ build-windows-exe:
     - uv pip install --system fastapi google-api-python-client google-auth-httplib2 google-auth-oauthlib python-dotenv uvicorn pyinstaller httpx pytest
     - echo "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" >> .env
     - echo "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" >> .env
-    - pyinstaller --name DriveCleaner --add-data "static;static" --add-data ".env;." --onefile main.py
+    - pyinstaller --name DriveCleaner --icon=static/logo.ico --add-data "static;static" --add-data ".env;." --onefile main.py
     - mv dist/DriveCleaner.exe dist/DriveCleaner-Windows.exe
   artifacts:
     paths:
@@ -31,16 +31,16 @@ build-linux-binaries:
     - uv pip install --system fastapi google-api-python-client google-auth-httplib2 google-auth-oauthlib python-dotenv uvicorn pyinstaller httpx pytest
     - echo "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" >> .env
     - echo "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET" >> .env
-    - pyinstaller --name DriveCleaner --add-data "static:static" --add-data ".env:." --onefile main.py
+    - pyinstaller --name DriveCleaner --icon=static/logo.png --add-data "static:static" --add-data ".env:." --onefile main.py
     - mv dist/DriveCleaner dist/DriveCleaner-Linux
     
     # AppImage Creation
     - mkdir -p AppDir/usr/bin
     - cp dist/DriveCleaner-Linux AppDir/usr/bin/DriveCleaner
-    - echo -e "[Desktop Entry]\nName=DriveCleaner\nExec=DriveCleaner\nIcon=utilities-terminal\nType=Application\nCategories=Utility;" > AppDir/DriveCleaner.desktop
+    - echo -e "[Desktop Entry]\nName=DriveCleaner\nExec=DriveCleaner\nIcon=DriveCleaner\nType=Application\nCategories=Utility;" > AppDir/DriveCleaner.desktop
     - echo -e '#!/bin/sh\nHERE="$(dirname "$(readlink -f "${0}")")"\nexec "${HERE}/usr/bin/DriveCleaner" "$@"' > AppDir/AppRun
     - chmod +x AppDir/AppRun
-    - touch AppDir/utilities-terminal.png
+    - cp static/logo.png AppDir/DriveCleaner.png
     - wget -q -O appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
     - chmod +x appimagetool
     - ARCH=x86_64 ./appimagetool --appimage-extract-and-run AppDir dist/DriveCleaner-x86_64.AppImage

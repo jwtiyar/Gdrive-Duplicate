@@ -38,11 +38,11 @@ jobs:
 
     - name: Build with PyInstaller (Windows)
       if: matrix.os == 'windows-latest'
-      run: pyinstaller --name DriveCleaner --add-data "static;static" --add-data ".env;." --onefile main.py
+      run: pyinstaller --name DriveCleaner --icon=static/logo.ico --add-data "static;static" --add-data ".env;." --onefile main.py
 
     - name: Build with PyInstaller (Linux)
       if: matrix.os == 'ubuntu-latest'
-      run: pyinstaller --name DriveCleaner --add-data "static:static" --add-data ".env:." --onefile main.py
+      run: pyinstaller --name DriveCleaner --icon=static/logo.png --add-data "static:static" --add-data ".env:." --onefile main.py
 
     # -- OS SPECIFIC ARTIFACT HANDLING --
     
@@ -67,7 +67,7 @@ jobs:
         [Desktop Entry]
         Name=DriveCleaner
         Exec=DriveCleaner
-        Icon=utilities-terminal
+        Icon=DriveCleaner
         Type=Application
         Categories=Utility;
         EOF
@@ -81,7 +81,7 @@ jobs:
         chmod +x AppDir/AppRun
         
         # We need an icon file for AppImage to build
-        touch AppDir/utilities-terminal.png
+        cp static/logo.png AppDir/DriveCleaner.png
         
         # Download appimagetool
         wget -q -O appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
