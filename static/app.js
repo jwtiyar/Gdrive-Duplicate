@@ -311,7 +311,7 @@ function renderDuplicatesList() {
     groupElement.className = 'glass-panel accordion-group card';
     groupElement.setAttribute('data-name', group.name);
     
-    const totalGroupSize = group.size * group.copies.length;
+
     const copiesCount = group.copies.length;
     const deletableCount = copiesCount - 1;
 

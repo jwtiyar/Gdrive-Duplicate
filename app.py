@@ -183,7 +183,9 @@ def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types
             formatted_groups = []
             path_memo = {}
             
-            for (size, md5), copies in sorted(duplicate_groups.items(), key=lambda x: x[1][0].get("name", "").lower()):
+            for group_key, copies in sorted(duplicate_groups.items(), key=lambda x: x[1][0].get("name", "").lower()):
+                size = group_key[0]
+                md5 = group_key[1]
                 copies_sorted = sorted(copies, key=lambda f: f.get("createdTime", ""))
                 keeper = copies_sorted[0]
                 group_name = keeper.get("name", "Unknown")

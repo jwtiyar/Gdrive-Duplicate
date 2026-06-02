@@ -6,7 +6,7 @@ Finds and deletes duplicate files in your Google Drive using the Google Drive AP
 
 Strategy:
   1. List ALL files in Drive (excluding Google-native formats)
-  2. Group by (name + size + md5Checksum) — all three must match
+  2. Group by (size + md5Checksum) — to find duplicates even if renamed
   3. Keep the OLDEST copy per group, mark the rest for deletion
   4. Show full report + save CSV before touching anything
   5. Require explicit "YES" confirmation before any deletion
