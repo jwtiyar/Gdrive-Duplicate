@@ -57,7 +57,15 @@ class DeleteRequest(BaseModel):
 
 # -- Bundled Credentials for Customers ----------------------------------------
 from dotenv import load_dotenv
-load_dotenv()
+import sys
+
+# In PyInstaller, bundled files are extracted to sys._MEIPASS
+if getattr(sys, 'frozen', False):
+    env_path = os.path.join(sys._MEIPASS, '.env')
+else:
+    env_path = os.path.join(os.path.dirname(__file__), '.env')
+
+load_dotenv(env_path)
 
 def ensure_credentials_file():
     """Ensure the credentials.json file exists with the bundled credentials."""
