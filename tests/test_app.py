@@ -43,3 +43,22 @@ def test_scan_cancel_endpoint():
     
     # Restore status to idle
     scan_state["status"] = "idle"
+
+def test_delete_cancel_endpoint():
+    # First, make sure delete_state is not "deleting"
+    from app import delete_state
+    delete_state["status"] = "idle"
+    
+    # Try cancelling when not deleting
+    response = client.post("/api/delete/cancel")
+    assert response.status_code == 200
+    assert response.json()["status"] == "not_deleting"
+    
+    # Try cancelling when deleting
+    delete_state["status"] = "deleting"
+    response = client.post("/api/delete/cancel")
+    assert response.status_code == 200
+    assert response.json()["status"] == "cancelling"
+    
+    # Restore status to idle
+    delete_state["status"] = "idle"

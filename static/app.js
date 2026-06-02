@@ -953,6 +953,22 @@ async function triggerDeletion(fileIds, purge) {
   }
 }
 
+// Handle Cancel Delete Button
+document.addEventListener('DOMContentLoaded', () => {
+  const btnCancelDelete = document.getElementById('btn-cancel-delete');
+  if (btnCancelDelete) {
+    btnCancelDelete.addEventListener('click', async () => {
+      btnCancelDelete.disabled = true;
+      btnCancelDelete.textContent = 'Stopping...';
+      try {
+        await fetch('/api/delete/cancel', { method: 'POST' });
+      } catch (err) {
+        console.error('Error cancelling deletion:', err);
+      }
+    });
+  }
+});
+
 async function pollDeleteStatus() {
   const progressBar = document.getElementById('delete-progress-bar');
   const countStat = document.getElementById('delete-stat-count');
@@ -981,15 +997,33 @@ async function pollDeleteStatus() {
         
         // Return to setup / reset layout
         resetAppWorkflowState();
+        resetCancelDeleteButton();
       }, 500);
     } 
+    else if (data.status === 'cancelled') {
+      clearInterval(deletePollInterval);
+      overlay.classList.add('hidden');
+      showToast('Deletion cancelled.', 'success');
+      resetAppWorkflowState();
+      resetCancelDeleteButton();
+    }
     else if (data.status === 'error') {
       clearInterval(deletePollInterval);
       showToast(`Deletion failed: ${data.error}`);
       overlay.classList.add('hidden');
+      resetCancelDeleteButton();
     }
   } catch (err) {
     console.error('Error polling delete status:', err);
+  }
+}
+
+function resetCancelDeleteButton() {
+  const cancelBtn = document.getElementById('btn-cancel-delete');
+  if (cancelBtn) {
+    cancelBtn.disabled = false;
+    cancelBtn.innerHTML = '<i data-lucide="square" style="width:16px;height:16px;"></i> Stop Delete';
+    lucide.createIcons();
   }
 }
 

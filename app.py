@@ -119,6 +119,7 @@ scanned_files_cache = []
 folder_cache_global = {}
 active_oauth_flows = {}
 scan_cancelled = False
+delete_cancelled = False
 
 # -- Authentication Checkers -------------------------------------------------
 def is_credentials_present() -> bool:
@@ -232,6 +233,8 @@ def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types
 
 # -- Background Deletion Task (Real Mode) -------------------------------------
 def bg_delete_real(file_ids: List[str], purge: bool):
+    global delete_cancelled
+    delete_cancelled = False
     delete_state["status"] = "deleting"
     delete_state["error"] = None
     delete_state["progress"] = {"current": 0, "total": len(file_ids), "success": 0, "failed": 0, "actual_bytes": 0}
@@ -255,11 +258,14 @@ def bg_delete_real(file_ids: List[str], purge: bool):
     try:
         service = gdrive_dedup.authenticate()
         if purge:
-            gdrive_dedup.purge_files(service, files_to_delete, progress_callback=progress_callback)
+            gdrive_dedup.purge_files(service, files_to_delete, progress_callback=progress_callback, cancel_check=lambda: delete_cancelled)
         else:
-            gdrive_dedup.trash_files(service, files_to_delete, progress_callback=progress_callback)
+            gdrive_dedup.trash_files(service, files_to_delete, progress_callback=progress_callback, cancel_check=lambda: delete_cancelled)
         
         delete_state["status"] = "completed"
+    except InterruptedError:
+        delete_state["status"] = "cancelled"
+        delete_state["error"] = "Deletion was cancelled by user."
     except Exception as e:
         delete_state["status"] = "error"
         delete_state["error"] = str(e)
@@ -400,6 +406,14 @@ def api_start_delete(req: DeleteRequest, background_tasks: BackgroundTasks):
 @app.get("/api/delete/status")
 def api_delete_status():
     return delete_state
+
+@app.post("/api/delete/cancel")
+def api_cancel_delete():
+    global delete_cancelled
+    if delete_state["status"] != "deleting":
+        return {"status": "not_deleting"}
+    delete_cancelled = True
+    return {"status": "cancelling"}
 
 # -- Serve Static Assets -----------------------------------------------------
 def get_base_dir():

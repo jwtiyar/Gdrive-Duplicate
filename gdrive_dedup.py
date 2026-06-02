@@ -503,12 +503,15 @@ def export_preview_csv(files, folder_cache, path_memo):
 
 
 # -- deletion loops -----------------------------------------------------------
-def trash_files(service, files_to_delete, progress_callback=None):
+def trash_files(service, files_to_delete, progress_callback=None, cancel_check=None):
     """Move files to Trash. Recoverable from Drive UI."""
     success = failed = actual_bytes = 0
     total = len(files_to_delete)
 
     for i, (f, size) in enumerate(files_to_delete, 1):
+        if cancel_check and cancel_check():
+            raise InterruptedError("Deletion cancelled by user.")
+            
         fid   = f["id"]
         fname = f.get("name", "Unknown")
         if execute_with_backoff(
@@ -528,12 +531,15 @@ def trash_files(service, files_to_delete, progress_callback=None):
     return success, failed, actual_bytes
 
 
-def purge_files(service, files_to_delete, progress_callback=None):
+def purge_files(service, files_to_delete, progress_callback=None, cancel_check=None):
     """Permanently delete files. NOT recoverable."""
     success = failed = actual_bytes = 0
     total = len(files_to_delete)
 
     for i, (f, size) in enumerate(files_to_delete, 1):
+        if cancel_check and cancel_check():
+            raise InterruptedError("Deletion cancelled by user.")
+            
         fid   = f["id"]
         fname = f.get("name", "Unknown")
         if execute_with_backoff(
