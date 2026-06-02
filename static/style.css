@@ -94,6 +94,7 @@ body {
 .flex-row { display: flex; flex-direction: row; }
 .flex-justify-between { justify-content: space-between; }
 .flex-align-center { align-items: center; }
+.gap-md { gap: 1rem; }
 
 /* ================= LAYOUT GLASS PANELS ================= */
 .glass-panel {
@@ -270,7 +271,7 @@ body {
 /* ================= APP SHELL LAYER ================= */
 .app-shell {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 260px minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -390,6 +391,8 @@ body {
   padding: 2.5rem 3rem;
   max-width: 1400px;
   width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 .topbar {

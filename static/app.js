@@ -478,6 +478,7 @@ function initSelectiveDeleter() {
   const btnSelectiveDeselectAll = document.getElementById('btn-selective-deselect-all');
   const headerSelectAll = document.getElementById('header-select-all-selective');
 
+
   // Pill Toggling
   mimePills.forEach(pill => {
     pill.addEventListener('click', () => {
@@ -497,14 +498,20 @@ function initSelectiveDeleter() {
     e.preventDefault();
     
     const namesInput = document.getElementById('selective-names').value;
+    const minSizeInput = document.getElementById('selective-min-size').value;
+    const maxSizeInput = document.getElementById('selective-max-size').value;
     const includeShared = document.getElementById('selective-shared-drives').checked;
     
     // Assemble MIME categories
     const categoriesArray = Array.from(selectedSelectiveMimeCategories);
     const categoriesString = categoriesArray.join(',');
 
+    if (!namesInput.trim() && !categoriesString && !minSizeInput.trim() && !maxSizeInput.trim()) {
+      showToast('Please apply at least one filter (Name, Type, or Size) before searching.');
+      return;
+    }
+
     selectivePreviewPanel.classList.add('hidden');
-    document.getElementById('selective-filter-card').classList.add('hidden');
     selectiveFilterForm.parentElement.classList.add('hidden');
     
     const selectiveProgressCard = document.getElementById('selective-progress-card');
@@ -517,6 +524,8 @@ function initSelectiveDeleter() {
         body: JSON.stringify({
           names: namesInput || null,
           types: categoriesString || null,
+          min_size_mb: minSizeInput ? parseFloat(minSizeInput) : null,
+          max_size_mb: maxSizeInput ? parseFloat(maxSizeInput) : null,
           include_shared: includeShared
         })
       });
@@ -530,7 +539,6 @@ function initSelectiveDeleter() {
     } catch (err) {
       showToast(`Error scanning files: ${err.message}`);
       selectiveProgressCard.classList.add('hidden');
-      document.getElementById('selective-filter-card').classList.remove('hidden');
       selectiveFilterForm.parentElement.classList.remove('hidden');
     }
   });
@@ -589,7 +597,6 @@ async function pollSelectiveScanStatus() {
   const fileStat = document.getElementById('selective-stat-files');
   const folderStat = document.getElementById('selective-stat-folders');
   const selectiveProgressCard = document.getElementById('selective-progress-card');
-  const selectiveFilterCard = document.getElementById('selective-filter-card');
   const selectiveFilterForm = document.getElementById('selective-filter-form');
   const selectivePreviewPanel = document.getElementById('selective-preview-panel');
   const summaryTitle = document.getElementById('selective-summary-title');
@@ -608,7 +615,6 @@ async function pollSelectiveScanStatus() {
       
       setTimeout(() => {
         selectiveProgressCard.classList.add('hidden');
-        selectiveFilterCard.classList.remove('hidden');
         selectiveFilterForm.parentElement.classList.remove('hidden');
         selectivePreviewPanel.classList.remove('hidden');
         
@@ -637,7 +643,6 @@ async function pollSelectiveScanStatus() {
       clearInterval(scanPollInterval);
       showToast('Scan cancelled.');
       selectiveProgressCard.classList.add('hidden');
-      selectiveFilterCard.classList.remove('hidden');
       selectiveFilterForm.parentElement.classList.remove('hidden');
       const cancelBtn = document.getElementById('btn-cancel-selective-scan');
       cancelBtn.disabled = false;
@@ -648,7 +653,6 @@ async function pollSelectiveScanStatus() {
       clearInterval(scanPollInterval);
       showToast(`Search failed: ${data.error}`);
       selectiveProgressCard.classList.add('hidden');
-      selectiveFilterCard.classList.remove('hidden');
       selectiveFilterForm.parentElement.classList.remove('hidden');
       const cancelBtn = document.getElementById('btn-cancel-selective-scan');
       cancelBtn.disabled = false;
@@ -932,6 +936,8 @@ async function triggerDeletion(fileIds, purge) {
   
   document.getElementById('delete-progress-title').textContent = purge ? 'Permanently Purging...' : 'Moving to Trash...';
   document.getElementById('delete-progress-subtitle').textContent = 'Connecting to Drive API...';
+  document.getElementById('delete-log-hint').classList.add('hidden');
+  document.getElementById('delete-log-path').textContent = '';
   
   try {
     const response = await fetch('/api/delete', {
@@ -991,6 +997,13 @@ async function pollDeleteStatus() {
       clearInterval(deletePollInterval);
       progressBar.style.width = '100%';
       
+      const logHint = document.getElementById('delete-log-hint');
+      const logPath = document.getElementById('delete-log-path');
+      if (data.log_path) {
+        logPath.textContent = data.log_path;
+        logHint.classList.remove('hidden');
+      }
+      
       setTimeout(() => {
         overlay.classList.add('hidden');
         showToast('Cleanup completed successfully!', 'success');
@@ -998,7 +1011,7 @@ async function pollDeleteStatus() {
         // Return to setup / reset layout
         resetAppWorkflowState();
         resetCancelDeleteButton();
-      }, 500);
+      }, 5000); // Give user 5 seconds to see the log path before hiding
     } 
     else if (data.status === 'cancelled') {
       clearInterval(deletePollInterval);
