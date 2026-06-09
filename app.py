@@ -39,6 +39,9 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import gdrive_dedup
 
+# -- State locks for thread safety --------------------------------------------
+state_lock = threading.Lock()
+
 app = FastAPI(title="Google Drive Cleaner GUI")
 
 class ScanRequest(BaseModel):
@@ -87,8 +90,9 @@ def ensure_credentials_file():
     except Exception as e:
         print(f"Warning: Failed to write bundled credentials: {e}")
 
-# Ensure the credentials file is written immediately on module load
-ensure_credentials_file()
+# Write credentials.json only when running as the main process, not on test imports
+if os.environ.get("GDRIVE_DUP_SKIP_INIT") != "1":
+    ensure_credentials_file()
 
 # -- App State ----------------------------------------------------------------
 scan_state = {
@@ -119,9 +123,23 @@ delete_state = {
 # In-memory storage for scanned files list (needed to process deletions later)
 scanned_files_cache = []
 folder_cache_global = {}
-active_oauth_flows = {}
-scan_cancelled = False
-delete_cancelled = False
+active_oauth_flows = {}       # state -> (flow, timestamp) for TTL cleanup
+OAUTH_FLOW_TTL_SECONDS = 600  # expire stale flows after 10 minutes
+
+def clean_stale_oauth_flows():
+    """Remove OAuth flows older than OAUTH_FLOW_TTL_SECONDS."""
+    now = time.time()
+    stale = [s for s, (_, ts) in active_oauth_flows.items() if now - ts > OAUTH_FLOW_TTL_SECONDS]
+    for s in stale:
+        del active_oauth_flows[s]
+scan_cancelled_event = threading.Event()
+delete_cancelled_event = threading.Event()
+
+def is_scan_cancelled():
+    return scan_cancelled_event.is_set()
+
+def is_delete_cancelled():
+    return delete_cancelled_event.is_set()
 
 # -- Authentication Checkers -------------------------------------------------
 def is_credentials_present() -> bool:
@@ -132,19 +150,21 @@ def is_token_present() -> bool:
 
 # -- Background Scan Task (Real Mode) ----------------------------------------
 def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types_filter: Optional[str] = None, strict_name: bool = False, min_size_mb: Optional[float] = None, max_size_mb: Optional[float] = None):
-    global scanned_files_cache, folder_cache_global, scan_cancelled
-    scan_cancelled = False
-    scan_state["status"] = "scanning"
-    scan_state["progress"] = {"scanned_count": 0, "page_num": 0, "folders_cached": 0}
-    scan_state["error"] = None
-    scan_state["results"] = None
+    global scanned_files_cache, folder_cache_global
+    scan_cancelled_event.clear()
+    with state_lock:
+        scan_state["status"] = "scanning"
+        scan_state["progress"] = {"scanned_count": 0, "page_num": 0, "folders_cached": 0}
+        scan_state["error"] = None
+        scan_state["results"] = None
 
     def progress_callback(scanned, pages, folders):
-        scan_state["progress"] = {
-            "scanned_count": scanned,
-            "page_num": pages,
-            "folders_cached": folders
-        }
+        with state_lock:
+            scan_state["progress"] = {
+                "scanned_count": scanned,
+                "page_num": pages,
+                "folders_cached": folders
+            }
 
     try:
         service = gdrive_dedup.authenticate()
@@ -152,7 +172,7 @@ def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types
             service, 
             include_shared=include_shared, 
             progress_callback=progress_callback,
-            cancel_check=lambda: scan_cancelled
+            cancel_check=is_scan_cancelled
         )
         
         scanned_files_cache = real_files
@@ -227,24 +247,27 @@ def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types
                 "total_files": len(real_files)
             }
             
-        scan_state["status"] = "completed"
+        with state_lock:
+            scan_state["status"] = "completed"
         
-    except InterruptedError:
-        scan_state["status"] = "cancelled"
-        scan_state["error"] = "Scan was cancelled by user."
+    except gdrive_dedup.ScanCancelledError:
+        with state_lock:
+            scan_state["status"] = "cancelled"
+            scan_state["error"] = "Scan was cancelled by user."
     except Exception as e:
-        scan_state["status"] = "error"
-        scan_state["error"] = str(e)
+        with state_lock:
+            scan_state["status"] = "error"
+            scan_state["error"] = str(e)
 
 
 
 # -- Background Deletion Task (Real Mode) -------------------------------------
 def bg_delete_real(file_ids: List[str], purge: bool):
-    global delete_cancelled
-    delete_cancelled = False
-    delete_state["status"] = "deleting"
-    delete_state["error"] = None
-    delete_state["progress"] = {"current": 0, "total": len(file_ids), "success": 0, "failed": 0, "actual_bytes": 0}
+    delete_cancelled_event.clear()
+    with state_lock:
+        delete_state["status"] = "deleting"
+        delete_state["error"] = None
+        delete_state["progress"] = {"current": 0, "total": len(file_ids), "success": 0, "failed": 0, "actual_bytes": 0}
 
     # Find the files to delete in cache to get their sizes
     files_to_delete = []
@@ -254,13 +277,14 @@ def bg_delete_real(file_ids: List[str], purge: bool):
         files_to_delete.append(({"id": fid, "name": found_file.get("name", "Unknown") if found_file else "Unknown"}, size))
 
     def progress_callback(curr, tot, succ, fail, act_bytes):
-        delete_state["progress"] = {
-            "current": curr,
-            "total": tot,
-            "success": succ,
-            "failed": fail,
-            "actual_bytes": act_bytes
-        }
+        with state_lock:
+            delete_state["progress"] = {
+                "current": curr,
+                "total": tot,
+                "success": succ,
+                "failed": fail,
+                "actual_bytes": act_bytes
+            }
 
     try:
         service = gdrive_dedup.authenticate()
@@ -271,17 +295,20 @@ def bg_delete_real(file_ids: List[str], purge: bool):
         delete_state["log_path"] = log_path
         
         if purge:
-            gdrive_dedup.purge_files(service, files_to_delete, progress_callback=progress_callback, cancel_check=lambda: delete_cancelled, log_path=log_path)
+            gdrive_dedup.purge_files(service, files_to_delete, progress_callback=progress_callback, cancel_check=is_delete_cancelled, log_path=log_path)
         else:
-            gdrive_dedup.trash_files(service, files_to_delete, progress_callback=progress_callback, cancel_check=lambda: delete_cancelled, log_path=log_path)
+            gdrive_dedup.trash_files(service, files_to_delete, progress_callback=progress_callback, cancel_check=is_delete_cancelled, log_path=log_path)
         
-        delete_state["status"] = "completed"
-    except InterruptedError:
-        delete_state["status"] = "cancelled"
-        delete_state["error"] = "Deletion was cancelled by user."
+        with state_lock:
+            delete_state["status"] = "completed"
+    except gdrive_dedup.ScanCancelledError:
+        with state_lock:
+            delete_state["status"] = "cancelled"
+            delete_state["error"] = "Deletion was cancelled by user."
     except Exception as e:
-        delete_state["status"] = "error"
-        delete_state["error"] = str(e)
+        with state_lock:
+            delete_state["status"] = "error"
+            delete_state["error"] = str(e)
 
 
 # -- API Routes ---------------------------------------------------------------
@@ -290,20 +317,21 @@ def api_auth_status():
     creds_exist = is_credentials_present()
     token_active = False
     
-    if creds_exist:
+    if creds_exist and is_token_present():
         try:
-            # Try to build service silently. If it works, token is active.
-            if is_token_present():
-                gdrive_dedup.authenticate()
-                token_active = True
+            # Validate token.json is parseable without triggering full OAuth flow
+            from google.oauth2.credentials import Credentials
+            creds = Credentials.from_authorized_user_file(
+                gdrive_dedup.TOKEN_FILE, gdrive_dedup.SCOPES
+            )
+            token_active = creds.valid or (creds.expired and creds.refresh_token is not None)
         except Exception:
             token_active = False
 
-    mode = "real" if creds_exist else "demo"
     return {
         "credentials_exist": creds_exist,
         "token_active": token_active,
-        "mode": mode
+        "mode": "real" if creds_exist else "demo"
     }
 
 @app.post("/api/auth/google-login")
@@ -320,14 +348,16 @@ def api_google_login():
             redirect_uri="http://localhost:8000/callback"
         )
         auth_url, state = flow.authorization_url(prompt='consent', access_type='offline')
-        active_oauth_flows[state] = flow
+        clean_stale_oauth_flows()
+        active_oauth_flows[state] = (flow, time.time())
         return {"auth_url": auth_url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate authorization URL: {e}")
 
 @app.get("/callback", response_class=HTMLResponse)
 def oauth_callback(code: str, state: str):
-    flow = active_oauth_flows.pop(state, None)
+    entry = active_oauth_flows.pop(state, None)
+    flow = entry[0] if entry else None
     if not flow:
         return """
         <html>
@@ -347,9 +377,10 @@ def oauth_callback(code: str, state: str):
             
         return """
         <html>
+            <head><script>setTimeout(function(){ window.close(); }, 2000);</script></head>
             <body style="font-family: sans-serif; background-color: #0b0d18; color: #14b8a6; text-align: center; padding-top: 80px;">
                 <h2 style="color: #14b8a6;">Authentication Successful!</h2>
-                <p style="color: #9ca3af;">You have successfully linked your Google account. You can close this tab and return to the dashboard.</p>
+                <p style="color: #9ca3af;">You have successfully linked your Google account. This tab will close automatically.</p>
             </body>
         </html>
         """
@@ -402,10 +433,9 @@ def api_scan_status():
 
 @app.post("/api/scan/cancel")
 def api_cancel_scan():
-    global scan_cancelled
     if scan_state["status"] != "scanning":
         return {"status": "not_scanning"}
-    scan_cancelled = True
+    scan_cancelled_event.set()
     return {"status": "cancelling"}
 
 @app.post("/api/delete")
@@ -430,10 +460,9 @@ def api_delete_status():
 
 @app.post("/api/delete/cancel")
 def api_cancel_delete():
-    global delete_cancelled
     if delete_state["status"] != "deleting":
         return {"status": "not_deleting"}
-    delete_cancelled = True
+    delete_cancelled_event.set()
     return {"status": "cancelling"}
 
 # -- Serve Static Assets -----------------------------------------------------

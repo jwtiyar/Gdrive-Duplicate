@@ -1,5 +1,8 @@
 import os
 import sys
+# Prevent module-level side effects in app.py (credentials.json write, etc.)
+os.environ["GDRIVE_DUP_SKIP_INIT"] = "1"
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from fastapi.testclient import TestClient
@@ -22,7 +25,7 @@ def test_scan_unauthorized(_mock_token_present):
     # Hitting scan without a valid Google token should return 400 Bad Request
     response = client.post("/api/scan", json={"include_shared": False})
     assert response.status_code == 400
-    assert "Google authentication required" in response.json()["detail"] or "Credentials not found" in response.json()["detail"]
+    assert response.json()["detail"] == "Google authentication required."
 
 
 def test_scan_cancel_endpoint():

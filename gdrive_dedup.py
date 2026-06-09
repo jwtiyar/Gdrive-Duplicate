@@ -36,6 +36,15 @@ import time
 from collections import defaultdict
 from datetime import datetime
 
+# -- custom exceptions --------------------------------------------------------
+class AuthError(Exception):
+    """Raised when authentication fails (replaces sys.exit in library mode)."""
+    pass
+
+class ScanCancelledError(Exception):
+    """Raised when scan or deletion is cancelled by user."""
+    pass
+
 # -- third-party --------------------------------------------------------------
 try:
     from google.auth.transport.requests import Request
@@ -46,7 +55,7 @@ try:
     from googleapiclient.errors import HttpError
 except ImportError:
     print("Missing dependencies. Run:\n  pip install google-api-python-client google-auth-oauthlib google-auth-httplib2")
-    sys.exit(1)
+    raise AuthError("Missing dependencies")
 
 # -- constants ----------------------------------------------------------------
 SCOPES     = ["https://www.googleapis.com/auth/drive"]
@@ -96,17 +105,17 @@ def authenticate():
             try:
                 creds.refresh(Request())
             except TransportError as e:
-                print(f"\n[ERROR] Could not refresh token: {e}")
-                print(f"Delete '{TOKEN_FILE}' and run again to re-authenticate.")
-                sys.exit(1)
+                raise AuthError(
+                    f"Could not refresh token: {e}\n"
+                    f"Delete '{TOKEN_FILE}' and run again to re-authenticate."
+                )
         else:
             if not os.path.exists(CREDS_FILE):
-                print(
-                    f"[ERROR] '{CREDS_FILE}' not found.\n"
+                raise AuthError(
+                    f"'{CREDS_FILE}' not found.\n"
                     "Download it from: https://console.cloud.google.com/apis/credentials\n"
                     "Place it in the same folder as this script."
                 )
-                sys.exit(1)
             flow = InstalledAppFlow.from_client_secrets_file(CREDS_FILE, SCOPES)
             creds = flow.run_local_server(port=0)
 
@@ -143,7 +152,7 @@ def list_all_files(service, include_shared=False, progress_callback=None, cancel
     while True:
         # Check for cancellation before each page fetch
         if cancel_check and cancel_check():
-            raise InterruptedError("Scan cancelled by user.")
+            raise ScanCancelledError("Scan cancelled by user.")
 
         params = {
             "pageSize": PAGE_SIZE,
@@ -169,8 +178,7 @@ def list_all_files(service, include_shared=False, progress_callback=None, cancel
                     print(f"\n  [!] Rate limited during scan. Retrying in {wait}s...", end="", flush=True)
                     time.sleep(wait)
                 else:
-                    print(f"\n[ERROR] Drive API error during listing: {e}")
-                    sys.exit(1)
+                    raise RuntimeError(f"Drive API error during listing: {e}")
 
         batch = result.get("files", [])
 
@@ -518,7 +526,7 @@ def trash_files(service, files_to_delete, progress_callback=None, cancel_check=N
 
     for i, (f, size) in enumerate(files_to_delete, 1):
         if cancel_check and cancel_check():
-            raise InterruptedError("Deletion cancelled by user.")
+            raise ScanCancelledError("Deletion cancelled by user.")
             
         fid   = f["id"]
         fname = f.get("name", "Unknown")
@@ -553,7 +561,7 @@ def purge_files(service, files_to_delete, progress_callback=None, cancel_check=N
 
     for i, (f, size) in enumerate(files_to_delete, 1):
         if cancel_check and cancel_check():
-            raise InterruptedError("Deletion cancelled by user.")
+            raise ScanCancelledError("Deletion cancelled by user.")
             
         fid   = f["id"]
         fname = f.get("name", "Unknown")
@@ -609,11 +617,18 @@ def main():
 
     args = parser.parse_args()
 
-    print("\nAuthenticating with Google Drive...")
-    service = authenticate()
+    try:
+        service = authenticate()
+    except AuthError as e:
+        print(f"\n[ERROR] {e}")
+        sys.exit(1)
     print("Authenticated.\n")
 
-    all_files, folder_cache = list_all_files(service, include_shared=args.shared_drives)
+    try:
+        all_files, folder_cache = list_all_files(service, include_shared=args.shared_drives)
+    except RuntimeError as e:
+        print(f"\n[ERROR] {e}")
+        sys.exit(1)
     if not all_files:
         print("No files found. Nothing to do.")
         return

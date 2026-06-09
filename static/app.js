@@ -8,7 +8,8 @@ function updateScanProgressUI(progress, fileStatElem, folderStatElem, progressBa
 // ================= GLOBAL STATE =================
 let connectionMode = 'demo'; // 'demo' or 'real'
 let authStatus = { credentials_exist: false, token_active: false };
-let scanPollInterval = null;
+let dedupPollInterval = null;
+let selectivePollInterval = null;
 let deletePollInterval = null;
 
 // Duplicate finder state
@@ -176,7 +177,7 @@ function initDeduplicator() {
       }
 
       // Start status polling
-      scanPollInterval = setInterval(pollScanStatus, 500);
+      dedupPollInterval = setInterval(pollScanStatus, 500);
     } catch (err) {
       showToast(`Error starting scan: ${err.message}`);
       dedupSetupCard.classList.remove('hidden');
@@ -291,7 +292,7 @@ async function pollScanStatus() {
       updateScanProgressUI(data.progress, fileStat, folderStat, progressBar);
     } 
     else if (data.status === 'completed') {
-      clearInterval(scanPollInterval);
+      clearInterval(dedupPollInterval);
       progressBar.style.width = '100%';
       
       setTimeout(() => {
@@ -325,7 +326,7 @@ async function pollScanStatus() {
       }, 500);
     } 
     else if (data.status === 'cancelled') {
-      clearInterval(scanPollInterval);
+      clearInterval(dedupPollInterval);
       showToast('Scan cancelled.');
       document.getElementById('dedup-setup-card').classList.remove('hidden');
       scanProgressCard.classList.add('hidden');
@@ -335,7 +336,7 @@ async function pollScanStatus() {
       lucide.createIcons();
     }
     else if (data.status === 'error') {
-      clearInterval(scanPollInterval);
+      clearInterval(dedupPollInterval);
       showToast(`Scan failed: ${data.error}`);
       document.getElementById('dedup-setup-card').classList.remove('hidden');
       scanProgressCard.classList.add('hidden');
@@ -412,7 +413,7 @@ function renderDuplicatesList() {
         <div>${checkboxHtml}</div>
         <div class="file-path">${copy.path}</div>
         <div>${formatBytes(copy.size)}</div>
-        <div class="file-created">${copy.createdTime.substring(0, 16).replace('T', ' ')}</div>
+        <div class="file-created">${(copy.createdTime || '').substring(0, 16).replace('T', ' ')}</div>
         <div>
           <span class="file-status-tag ${statusTagClass}" id="tag-${copy.id}">${statusTagText}</span>
         </div>
@@ -491,6 +492,9 @@ function recalculateSelectionSize() {
 
   const selectedSizeEl = document.getElementById('selected-reclaim-size');
   selectedSizeEl.textContent = formatBytes(totalBytes);
+  
+  const deleteBtn = document.getElementById('btn-open-delete-dialog');
+  deleteBtn.disabled = selectedDupeIds.size === 0;
 }
 
 // ================= VIEW: SELECTIVE DELETER =================
@@ -559,7 +563,7 @@ function initSelectiveDeleter() {
         throw new Error(errData.detail || 'Search failed');
       }
 
-      scanPollInterval = setInterval(pollSelectiveScanStatus, 500);
+      selectivePollInterval = setInterval(pollSelectiveScanStatus, 500);
     } catch (err) {
       showToast(`Error scanning files: ${err.message}`);
       selectiveProgressCard.classList.add('hidden');
@@ -634,7 +638,7 @@ async function pollSelectiveScanStatus() {
       updateScanProgressUI(data.progress, fileStat, folderStat, progressBar);
     } 
     else if (data.status === 'completed') {
-      clearInterval(scanPollInterval);
+      clearInterval(selectivePollInterval);
       progressBar.style.width = '100%';
       
       setTimeout(() => {
@@ -664,7 +668,7 @@ async function pollSelectiveScanStatus() {
       }, 500);
     } 
     else if (data.status === 'cancelled') {
-      clearInterval(scanPollInterval);
+      clearInterval(selectivePollInterval);
       showToast('Scan cancelled.');
       selectiveProgressCard.classList.add('hidden');
       selectiveFilterForm.parentElement.classList.remove('hidden');
@@ -674,7 +678,7 @@ async function pollSelectiveScanStatus() {
       lucide.createIcons();
     }
     else if (data.status === 'error') {
-      clearInterval(scanPollInterval);
+      clearInterval(selectivePollInterval);
       showToast(`Search failed: ${data.error}`);
       selectiveProgressCard.classList.add('hidden');
       selectiveFilterForm.parentElement.classList.remove('hidden');
@@ -710,7 +714,7 @@ function renderSelectivePreviewTable() {
       <td class="file-path">${file.path}</td>
       <td>${formatBytes(file.size)}</td>
       <td class="text-secondary">${file.mimeType.split('/').pop()}</td>
-      <td class="file-created">${file.createdTime.substring(0, 10)}</td>
+      <td class="file-created">${(file.createdTime || '').substring(0, 10)}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -760,6 +764,9 @@ function recalculateSelectiveSelection() {
   } else {
     headerCheckbox.checked = false;
   }
+  
+  const deleteBtn = document.getElementById('btn-open-selective-delete-dialog');
+  deleteBtn.disabled = count === 0;
 }
 
 // ================= VIEW: SETTINGS & STATUS =================

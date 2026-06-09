@@ -1,0 +1,8 @@
+README.md
+pyproject.toml
+gdrive_duplicate.egg-info/PKG-INFO
+gdrive_duplicate.egg-info/SOURCES.txt
+gdrive_duplicate.egg-info/dependency_links.txt
+gdrive_duplicate.egg-info/requires.txt
+gdrive_duplicate.egg-info/top_level.txt
+tests/test_app.py

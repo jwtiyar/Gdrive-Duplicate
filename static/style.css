@@ -229,6 +229,17 @@ body {
   box-shadow: none;
 }
 
+button:disabled,
+.btn:disabled,
+.btn-primary:disabled,
+.btn-danger:disabled,
+.btn-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(0.3);
+}
+
 .btn-outline.btn-danger:hover {
   background: rgba(239, 68, 68, 0.1);
   border-color: var(--danger);
