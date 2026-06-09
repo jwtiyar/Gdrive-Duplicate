@@ -23,7 +23,7 @@ def test_auth_status_no_creds(_mock_creds):
 @patch('app.is_token_present', return_value=False)
 def test_scan_unauthorized(_mock_token_present):
     # Hitting scan without a valid Google token should return 400 Bad Request
-    response = client.post("/api/scan", json={"include_shared": False})
+    response = client.post("/api/scan", json={"include_shared": False}, headers={"Origin": "http://127.0.0.1:8000"})
     assert response.status_code == 400
     assert response.json()["detail"] == "Google authentication required."
 
@@ -34,13 +34,13 @@ def test_scan_cancel_endpoint():
     scan_state["status"] = "idle"
     
     # Try cancelling when not scanning
-    response = client.post("/api/scan/cancel")
+    response = client.post("/api/scan/cancel", headers={"Origin": "http://127.0.0.1:8000"})
     assert response.status_code == 200
     assert response.json()["status"] == "not_scanning"
     
     # Try cancelling when scanning
     scan_state["status"] = "scanning"
-    response = client.post("/api/scan/cancel")
+    response = client.post("/api/scan/cancel", headers={"Origin": "http://127.0.0.1:8000"})
     assert response.status_code == 200
     assert response.json()["status"] == "cancelling"
     
@@ -53,13 +53,13 @@ def test_delete_cancel_endpoint():
     delete_state["status"] = "idle"
     
     # Try cancelling when not deleting
-    response = client.post("/api/delete/cancel")
+    response = client.post("/api/delete/cancel", headers={"Origin": "http://127.0.0.1:8000"})
     assert response.status_code == 200
     assert response.json()["status"] == "not_deleting"
     
     # Try cancelling when deleting
     delete_state["status"] = "deleting"
-    response = client.post("/api/delete/cancel")
+    response = client.post("/api/delete/cancel", headers={"Origin": "http://127.0.0.1:8000"})
     assert response.status_code == 200
     assert response.json()["status"] == "cancelling"
     

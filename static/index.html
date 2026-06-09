@@ -58,7 +58,7 @@
       <div class="sidebar-footer">
         <div class="connection-status-widget">
           <div class="status-indicator-dot" id="sidebar-indicator-dot"></div>
-          <span class="status-text" id="sidebar-status-text">Checking connection...</span>
+          <span id="sidebar-status-text">Checking connection...</span>
         </div>
         <button id="btn-sidebar-settings" class="btn btn-outline btn-block btn-sm" style="margin-top: 0.5rem;">
           <i data-lucide="key-round" class="btn-icon-left"></i>
@@ -82,35 +82,35 @@
           <p class="text-sm text-muted mb-md">Last Updated: June 7, 2026</p>
           
           <div class="text-sm" style="line-height: 1.6;">
-            <h4 class="mt-md mb-xs">1. INTRODUCTION</h4>
-            <p class="mb-sm text-secondary">gdrive-dup ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how our application accesses, uses, stores, and shares your Google user data.</p>
+              <h4 class="my-sm">1. INTRODUCTION</h4>
+              <p class="mb-sm text-secondary">gdrive-dup ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how our application accesses, uses, stores, and shares your Google user data.</p>
 
-            <h4 class="mt-md mb-xs">2. GOOGLE USER DATA WE ACCESS</h4>
+              <h4 class="my-sm">2. GOOGLE USER DATA WE ACCESS</h4>
             <p class="mb-sm text-secondary">gdrive-dup requests access to your Google Drive to function. Specifically, we request the <code>https://www.googleapis.com/auth/drive</code> scope.</p>
             <ul class="text-secondary ml-md mb-sm" style="list-style-type: disc;">
               <li><strong>Metadata Access:</strong> We read the metadata (names, sizes, hashes, and creation dates) of your files to identify duplicates.</li>
               <li><strong>File Deletion:</strong> With your explicit permission, we move duplicate files you select to your Google Drive Trash or delete them.</li>
             </ul>
 
-            <h4 class="mt-md mb-xs">3. HOW WE USE GOOGLE USER DATA</h4>
+            <h4 class="my-sm">3. HOW WE USE GOOGLE USER DATA</h4>
             <p class="mb-sm text-secondary">Your Google Drive data is used strictly for the purpose of identifying duplicate files and freeing up storage space on your behalf.</p>
 
-            <h4 class="mt-md mb-xs">4. DATA STORAGE AND SHARING (LOCAL ONLY)</h4>
+            <h4 class="my-sm">4. DATA STORAGE AND SHARING (LOCAL ONLY)</h4>
             <p class="mb-sm text-secondary">gdrive-dup is a strictly local application. All processing is done on your own device. We do not transmit, upload, or store your Google user data on any external servers. Your data is never shared with third parties.</p>
 
-            <h4 class="mt-md mb-xs">5. DATA RETENTION AND DELETION</h4>
+            <h4 class="my-sm">5. DATA RETENTION AND DELETION</h4>
             <p class="mb-sm text-secondary">Because gdrive-dup is a strictly local application, we do not retain your Google user data on any external servers. File metadata is only temporarily held in your device's memory while the application is actively scanning and is cleared when the process completes or closes. Your OAuth authentication token is stored locally on your device. You can permanently delete this data at any time by removing the <code>token.json</code> file from the application directory. You may also revoke the application's access at any time through your Google Account Security settings.</p>
 
-            <h4 class="mt-md mb-xs">6. SECURITY AND DATA PROTECTION MECHANISMS</h4>
+            <h4 class="my-sm">6. SECURITY AND DATA PROTECTION MECHANISMS</h4>
             <p class="mb-sm text-secondary">We implement specific mechanisms to protect your sensitive data. <strong>In transit:</strong> All communication between gdrive-dup and Google Drive APIs is securely encrypted using HTTPS/TLS protocols. <strong>At rest:</strong> Your OAuth tokens are stored locally on your device, protected by your operating system's built-in file access controls. We strongly recommend keeping your device secure and utilizing full-disk encryption to further protect your locally stored data.</p>
 
-            <h4 class="mt-md mb-xs">7. CHANGES TO THIS PRIVACY POLICY</h4>
+            <h4 class="my-sm">7. CHANGES TO THIS PRIVACY POLICY</h4>
             <p class="mb-sm text-secondary">We may update this Privacy Policy from time to time. If we make material changes to how we access, use, store, or share your Google user data, we will notify you by prominently posting a notice on our website and within the application before the changes take effect. We encourage you to periodically review this page for the latest information on our privacy practices.</p>
 
-            <h4 class="mt-md mb-xs">8. CONTACT US</h4>
+            <h4 class="my-sm">8. CONTACT US</h4>
             <p class="mb-sm text-secondary">If you have any questions about this Privacy Policy, please contact us at jwtiyar@gmail.com.</p>
             
-            <p class="mt-lg text-xs text-muted text-center">&copy; 2026 gdrive-dup. All rights reserved.</p>
+            <p class="my-md text-xs text-muted text-center">&copy; 2026 gdrive-dup. All rights reserved.</p>
           </div>
         </div>
       </section>
@@ -130,7 +130,7 @@
             <label class="checkbox-container mx-auto">
               <input type="checkbox" id="dedup-shared-drives">
               <span class="checkmark"></span>
-              <span class="label-text">Include Shared Drives in Scan</span>
+              <span>Include Shared Drives in Scan</span>
             </label>
             <label class="checkbox-container mx-auto mt-sm">
               <input type="checkbox" id="dedup-strict-name">
@@ -154,15 +154,15 @@
           <h3 id="scan-progress-title">Scanning Google Drive...</h3>
           <p class="text-secondary" id="scan-progress-subtitle">Fetching metadata page by page</p>
 
-          <div class="progress-container max-width-sm mx-auto my-md">
-            <div class="progress-bar-track">
-              <div id="scan-progress-bar" class="progress-bar-fill animated-pulse" style="width: 5%"></div>
+            <div class="max-width-sm mx-auto my-md">
+              <div class="progress-bar-track">
+                <div id="scan-progress-bar" class="progress-bar-fill animated-pulse" style="width: 5%"></div>
+              </div>
+              <div class="progress-stats-row text-secondary">
+                <span id="scan-stat-files">Scanned: 0 files</span>
+                <span id="scan-stat-folders">Cached: 0 folders</span>
+              </div>
             </div>
-            <div class="progress-stats-row text-secondary">
-              <span id="scan-stat-files">Scanned: 0 files</span>
-              <span id="scan-stat-folders">Cached: 0 folders</span>
-            </div>
-          </div>
           <button id="btn-cancel-scan" class="btn btn-outline btn-danger mt-sm">
             <i data-lucide="square" style="width:16px;height:16px;"></i>
             Stop Scan
@@ -227,15 +227,15 @@
           <h3>Searching Matching Files...</h3>
           <p class="text-secondary">Scanning Google Drive storage</p>
 
-          <div class="progress-container max-width-sm mx-auto my-md">
-            <div class="progress-bar-track">
-              <div id="selective-progress-bar" class="progress-bar-fill animated-pulse" style="width: 5%"></div>
+          <div class="max-width-sm mx-auto my-md">
+              <div class="progress-bar-track">
+                <div id="selective-progress-bar" class="progress-bar-fill animated-pulse" style="width: 5%"></div>
+              </div>
+              <div class="progress-stats-row text-secondary">
+                <span id="selective-stat-files">Scanned: 0 files</span>
+                <span id="selective-stat-folders">Cached: 0 folders</span>
+              </div>
             </div>
-            <div class="progress-stats-row text-secondary">
-              <span id="selective-stat-files">Scanned: 0 files</span>
-              <span id="selective-stat-folders">Cached: 0 folders</span>
-            </div>
-          </div>
           <button id="btn-cancel-selective-scan" class="btn btn-outline btn-danger mt-sm">
             <i data-lucide="square" style="width:16px;height:16px;"></i>
             Stop Scan
@@ -305,7 +305,7 @@
               <label class="checkbox-container">
                 <input type="checkbox" id="selective-shared-drives">
                 <span class="checkmark"></span>
-                <span class="label-text">Include Shared Drives</span>
+                <span>Include Shared Drives</span>
               </label>
               
               <button type="submit" id="btn-preview-selective" class="btn btn-primary">
@@ -328,6 +328,10 @@
               <button id="btn-rescan-selective" class="btn btn-outline">
                 <i data-lucide="rotate-cw" class="btn-icon-left"></i>
                 <span>Rescan</span>
+              </button>
+              <button id="btn-selective-export-csv" class="btn btn-outline">
+                <i data-lucide="download" class="btn-icon-left"></i>
+                <span>Export CSV</span>
               </button>
               <button id="btn-open-selective-delete-dialog" class="btn btn-primary">
                 <i data-lucide="trash-2" class="btn-icon-left"></i>
@@ -376,7 +380,7 @@
             <h3>Google Drive Authorization</h3>
             <p class="text-secondary">Link your Google Account to access and clean your files.</p>
 
-            <div class="settings-status-box my-md p-sm" id="google-auth-config-box">
+            <div class="settings-status-box my-md" id="google-auth-config-box">
               <div class="flex-row flex-align-center gap-sm mb-sm">
                 <i data-lucide="circle-dot" class="status-indicator-icon" id="settings-auth-icon"></i>
                 <h4 id="settings-auth-title" class="mb-0">Scanning configuration</h4>
@@ -384,7 +388,7 @@
               <p id="settings-auth-desc" class="text-secondary mb-0">Checking environment credentials...</p>
             </div>
 
-            <div class="flex-row gap-sm border-top py-md" id="settings-auth-actions">
+            <div class="flex-row gap-sm border-top my-sm" id="settings-auth-actions">
               <!-- Dynamically populated buttons -->
             </div>
           </div>
@@ -403,21 +407,21 @@
           <h3 id="delete-progress-title">Deleting Files...</h3>
           <p class="text-secondary" id="delete-progress-subtitle">Communicating with Google Drive API</p>
 
-          <div class="progress-container max-width-sm mx-auto my-md">
-            <div class="progress-bar-track">
-              <div id="delete-progress-bar" class="progress-bar-fill progress-danger" style="width: 5%"></div>
+          <div class="max-width-sm mx-auto my-md">
+              <div class="progress-bar-track">
+                <div id="delete-progress-bar" class="progress-bar-fill progress-danger" style="width: 5%"></div>
+              </div>
+              <div class="progress-stats-row text-secondary">
+                <span id="delete-stat-count">Deleted: 0/0 files</span>
+                <span id="delete-stat-size">Space Reclaimed: 0 B</span>
+              </div>
             </div>
-            <div class="progress-stats-row text-secondary">
-              <span id="delete-stat-count">Deleted: 0/0 files</span>
-              <span id="delete-stat-size">Space Reclaimed: 0 B</span>
-            </div>
-          </div>
           
           <div id="delete-log-hint" class="hidden text-secondary mt-sm mb-md text-sm">
             Log saved to: <span id="delete-log-path" class="text-primary" style="word-break: break-all;"></span>
           </div>
           
-          <button id="btn-cancel-delete" class="btn btn-outline btn-danger mt-md" style="min-width:140px;">
+          <button id="btn-cancel-delete" class="btn btn-outline btn-danger my-sm" style="min-width:140px;">
             <i data-lucide="square" style="width:16px;height:16px;"></i> Stop Delete
           </button>
         </div>
@@ -437,11 +441,11 @@
         Are you sure you want to delete these duplicate files?
       </p>
 
-      <div class="dialog-action-choices my-md text-left" id="purge-option-container">
+      <div class="my-md text-left" id="purge-option-container">
         <label class="checkbox-container">
           <input type="checkbox" id="checkbox-purge-permanently">
           <span class="checkmark border-danger"></span>
-          <span class="label-text"><strong>Permanently delete files</strong> (bypass Google Drive Trash - IRREVERSIBLE)</span>
+          <span><strong>Permanently delete files</strong> (bypass Google Drive Trash - IRREVERSIBLE)</span>
         </label>
       </div>
 

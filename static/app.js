@@ -188,6 +188,7 @@ function initDeduplicator() {
   const btnRescanDedup = document.getElementById('btn-rescan-dedup');
   if (btnRescanDedup) {
     btnRescanDedup.addEventListener('click', () => {
+      if (!confirm('Rescanning will discard current results. Continue?')) return;
       btnStartScan.click();
     });
   }
@@ -258,6 +259,7 @@ function initDeduplicator() {
   // Group Selection Actions
   btnSelectAll.addEventListener('click', () => {
     if (!scanResults || !scanResults.duplicates) return;
+    if (!confirm('Select all non-keeper copies for deletion?')) return;
     scanResults.duplicates.forEach(group => {
       group.copies.forEach(copy => {
         if (!copy.isKeeper) {
@@ -574,10 +576,41 @@ function initSelectiveDeleter() {
   const btnRescanSelective = document.getElementById('btn-rescan-selective');
   if (btnRescanSelective) {
     btnRescanSelective.addEventListener('click', () => {
+      if (!confirm('Rescanning will discard current results. Continue?')) return;
       const btnPreviewSelective = document.getElementById('btn-preview-selective');
       if (btnPreviewSelective) {
         btnPreviewSelective.click();
       }
+    });
+  }
+
+  // Export CSV for selective results
+  const btnSelectiveExportCsv = document.getElementById('btn-selective-export-csv');
+  if (btnSelectiveExportCsv) {
+    btnSelectiveExportCsv.addEventListener('click', () => {
+      if (!selectiveResults || !selectiveResults.files) return;
+      let csvContent = "data:text/csv;charset=utf-8,";
+      csvContent += "File Name,Folder Path,Size (Bytes),MIME Type,Created Time,File ID,Action\r\n";
+      selectiveResults.files.forEach(file => {
+        const action = selectedSelectiveIds.has(file.id) ? "DELETE" : "KEEP";
+        const row = [
+          `"${file.name.replace(/"/g, '""')}"`,
+          `"${file.path.replace(/"/g, '""')}"`,
+          file.size,
+          file.mimeType,
+          file.createdTime,
+          file.id,
+          action
+        ].join(",");
+        csvContent += row + "\r\n";
+      });
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `gdrive_selective_report_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     });
   }
 
@@ -598,6 +631,7 @@ function initSelectiveDeleter() {
   // Select/Deselect shortcuts for table rows
   btnSelectiveSelectAll.addEventListener('click', () => {
     if (!selectiveResults || !selectiveResults.files) return;
+    if (!confirm('Select all files in the results for deletion?')) return;
     selectiveResults.files.forEach(f => selectedSelectiveIds.add(f.id));
     updateSelectiveCheckboxes();
   });
@@ -936,8 +970,26 @@ function initDialogs() {
     const fileIds = currentDeleteTarget === 'dedup' 
       ? Array.from(selectedDupeIds) 
       : Array.from(selectedSelectiveIds);
+    
+    // Build file metadata from scan results
+    let files = [];
+    if (currentDeleteTarget === 'dedup' && scanResults && scanResults.duplicates) {
+      scanResults.duplicates.forEach(group => {
+        group.copies.forEach(copy => {
+          if (selectedDupeIds.has(copy.id)) {
+            files.push({ id: copy.id, name: copy.name, size: copy.size });
+          }
+        });
+      });
+    } else if (currentDeleteTarget === 'selective' && selectiveResults && selectiveResults.files) {
+      selectiveResults.files.forEach(f => {
+        if (selectedSelectiveIds.has(f.id)) {
+          files.push({ id: f.id, name: f.name, size: f.size });
+        }
+      });
+    }
       
-    triggerDeletion(fileIds, purgeCheck);
+    triggerDeletion(fileIds, purgeCheck, files);
   });
 
   // Fallback for browsers without closedby support (Safari)
@@ -961,7 +1013,7 @@ function initDialogs() {
 }
 
 // Trigger Deletion POST
-async function triggerDeletion(fileIds, purge) {
+async function triggerDeletion(fileIds, purge, files = []) {
   const overlay = document.getElementById('deletion-progress-overlay');
   overlay.classList.remove('hidden');
   
@@ -974,7 +1026,7 @@ async function triggerDeletion(fileIds, purge) {
     const response = await fetch('/api/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ file_ids: fileIds, purge: purge })
+      body: JSON.stringify({ file_ids: fileIds, files: files, purge: purge })
     });
     
     if (!response.ok) {

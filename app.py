@@ -33,7 +33,7 @@ from typing import List, Optional
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 # Import functions from existing script
@@ -56,6 +56,22 @@ state_lock = threading.Lock()
 
 app = FastAPI(title="Google Drive Cleaner GUI", lifespan=_lifespan)
 
+# -- Origin check middleware (blocks external API calls) ---------------------
+ALLOWED_ORIGINS = {"http://127.0.0.1:8000", "http://localhost:8000"}
+
+@app.middleware("http")
+async def check_origin(request, call_next):
+    if request.url.path.startswith("/api/"):
+        origin = request.headers.get("origin", "")
+        host = request.headers.get("host", "")
+        is_local = origin in ALLOWED_ORIGINS if origin else host in (
+            "127.0.0.1:8000", "localhost:8000"
+        )
+        if not is_local and request.method in ("POST", "PUT", "DELETE"):
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=403, content={"detail": "External API calls not allowed."})
+    return await call_next(request)
+
 class ScanRequest(BaseModel):
     names: Optional[str] = None
     types: Optional[str] = None
@@ -64,8 +80,20 @@ class ScanRequest(BaseModel):
     include_shared: bool = False
     strict_name: bool = False
 
+    @model_validator(mode='after')
+    def check_size_bounds(self):
+        if self.min_size_mb is not None and self.max_size_mb is not None and self.min_size_mb > self.max_size_mb:
+            raise ValueError("min_size_mb must be <= max_size_mb")
+        return self
+
+class FileToDelete(BaseModel):
+    id: str
+    name: str = "Unknown"
+    size: int = 0
+
 class DeleteRequest(BaseModel):
-    file_ids: List[str]
+    file_ids: List[str] = []
+    files: List[FileToDelete] = []
     purge: bool = False
 
 # In PyInstaller, bundled files are extracted to sys._MEIPASS
@@ -271,19 +299,30 @@ def bg_scan_real(include_shared: bool, names_filter: Optional[str] = None, types
 
 
 # -- Background Deletion Task (Real Mode) -------------------------------------
-def bg_delete_real(file_ids: List[str], purge: bool):
+def bg_delete_real(req: DeleteRequest):
+    file_ids = req.file_ids if req.file_ids else [f.id for f in req.files]
+    files_meta = req.files
     delete_cancelled_event.clear()
     with state_lock:
         delete_state["status"] = "deleting"
         delete_state["error"] = None
         delete_state["progress"] = {"current": 0, "total": len(file_ids), "success": 0, "failed": 0, "actual_bytes": 0}
 
-    # Find the files to delete in cache to get their sizes
+    # Use file metadata from request if provided, otherwise fall back to cache
     files_to_delete = []
     for fid in file_ids:
-        found_file = next((f for f in scanned_files_cache if f["id"] == fid), None)
-        size = int(found_file.get("size", 0)) if found_file else 0
-        files_to_delete.append(({"id": fid, "name": found_file.get("name", "Unknown") if found_file else "Unknown"}, size))
+        name = "Unknown"
+        size = 0
+        file_entry = next((f for f in files_meta if f.id == fid), None)
+        if file_entry:
+            name = file_entry.name
+            size = file_entry.size
+        else:
+            cached = next((f for f in scanned_files_cache if f["id"] == fid), None)
+            if cached:
+                name = cached.get("name", "Unknown")
+                size = int(cached.get("size", 0))
+        files_to_delete.append(({"id": fid, "name": name}, size))
 
     def progress_callback(curr, tot, succ, fail, act_bytes):
         with state_lock:
@@ -303,7 +342,7 @@ def bg_delete_real(file_ids: List[str], purge: bool):
         log_path = os.path.abspath(log_filename)
         delete_state["log_path"] = log_path
         
-        if purge:
+        if req.purge:
             gdrive_dedup.purge_files(service, files_to_delete, progress_callback=progress_callback, cancel_check=is_delete_cancelled, log_path=log_path)
         else:
             gdrive_dedup.trash_files(service, files_to_delete, progress_callback=progress_callback, cancel_check=is_delete_cancelled, log_path=log_path)
@@ -457,7 +496,7 @@ def api_start_delete(req: DeleteRequest, background_tasks: BackgroundTasks):
     if creds_exist:
         if not is_token_present():
             raise HTTPException(status_code=400, detail="Google authentication required.")
-        background_tasks.add_task(bg_delete_real, req.file_ids, req.purge)
+        background_tasks.add_task(bg_delete_real, req)
     else:
         raise HTTPException(status_code=400, detail="Credentials not found.")
         
@@ -498,9 +537,15 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # -- Startup Browser Automation ----------------------------------------------
 def open_browser():
-    # Wait for the server to spin up
-    time.sleep(1.5)
-    webbrowser.open("http://127.0.0.1:8000")
+    import urllib.request
+    # Poll until server is ready, then open browser
+    for _ in range(30):
+        try:
+            urllib.request.urlopen("http://127.0.0.1:8000")
+            webbrowser.open("http://127.0.0.1:8000")
+            return
+        except Exception:
+            time.sleep(0.5)
 
 if __name__ == "__main__":
     import uvicorn
