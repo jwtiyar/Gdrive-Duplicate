@@ -28,6 +28,7 @@ import time
 import threading
 import webbrowser
 import json
+from contextlib import asynccontextmanager
 from typing import List, Optional
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -39,10 +40,21 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import gdrive_dedup
 
+# -- Defer credentials write to server startup (not module import) ------------
+_started = False
+
+@asynccontextmanager
+async def _lifespan(app_instance: FastAPI):
+    global _started
+    if not _started:
+        ensure_credentials_file()
+        _started = True
+    yield
+
 # -- State locks for thread safety --------------------------------------------
 state_lock = threading.Lock()
 
-app = FastAPI(title="Google Drive Cleaner GUI")
+app = FastAPI(title="Google Drive Cleaner GUI", lifespan=_lifespan)
 
 class ScanRequest(BaseModel):
     names: Optional[str] = None
@@ -90,10 +102,7 @@ def ensure_credentials_file():
     except Exception as e:
         print(f"Warning: Failed to write bundled credentials: {e}")
 
-# Write credentials.json only when running as the main process, not on test imports
-if os.environ.get("GDRIVE_DUP_SKIP_INIT") != "1":
-    ensure_credentials_file()
-
+# -- Startup hook (runs when server starts, not on import) --------------------
 # -- App State ----------------------------------------------------------------
 scan_state = {
     "status": "idle",  # idle, scanning, completed, error

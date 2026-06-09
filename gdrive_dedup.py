@@ -621,14 +621,16 @@ def main():
         service = authenticate()
     except AuthError as e:
         print(f"\n[ERROR] {e}")
-        sys.exit(1)
+        print("[CLI] Exiting.")
+        return 1
     print("Authenticated.\n")
 
     try:
         all_files, folder_cache = list_all_files(service, include_shared=args.shared_drives)
     except RuntimeError as e:
         print(f"\n[ERROR] {e}")
-        sys.exit(1)
+        print("[CLI] Exiting.")
+        return 1
     if not all_files:
         print("No files found. Nothing to do.")
         return
