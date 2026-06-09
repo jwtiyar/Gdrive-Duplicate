@@ -3,6 +3,7 @@ __pycache__/
 token.json
 credentials.json
 *.csv
+deletion_history_*.txt
 
 .env
 

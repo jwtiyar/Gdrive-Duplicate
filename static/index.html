@@ -46,6 +46,12 @@
               <span>Settings & Status</span>
             </button>
           </li>
+          <li>
+            <button id="nav-privacy" class="nav-item">
+              <i data-lucide="shield" class="nav-icon"></i>
+              <span>Privacy Policy</span>
+            </button>
+          </li>
         </ul>
       </nav>
 
@@ -68,6 +74,46 @@
       <header class="topbar">
         <h2 id="view-title" class="page-title">Duplicate Finder</h2>
       </header>
+
+      <!-- VIEW: PRIVACY POLICY -->
+      <section id="view-privacy-content" class="view-pane hidden">
+        <div class="glass-panel card p-lg">
+          <h3 class="mb-sm text-primary">Privacy Policy</h3>
+          <p class="text-sm text-muted mb-md">Last Updated: June 7, 2026</p>
+          
+          <div class="text-sm" style="line-height: 1.6;">
+            <h4 class="mt-md mb-xs">1. INTRODUCTION</h4>
+            <p class="mb-sm text-secondary">gdrive-dup ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how our application accesses, uses, stores, and shares your Google user data.</p>
+
+            <h4 class="mt-md mb-xs">2. GOOGLE USER DATA WE ACCESS</h4>
+            <p class="mb-sm text-secondary">gdrive-dup requests access to your Google Drive to function. Specifically, we request the <code>https://www.googleapis.com/auth/drive</code> scope.</p>
+            <ul class="text-secondary ml-md mb-sm" style="list-style-type: disc;">
+              <li><strong>Metadata Access:</strong> We read the metadata (names, sizes, hashes, and creation dates) of your files to identify duplicates.</li>
+              <li><strong>File Deletion:</strong> With your explicit permission, we move duplicate files you select to your Google Drive Trash or delete them.</li>
+            </ul>
+
+            <h4 class="mt-md mb-xs">3. HOW WE USE GOOGLE USER DATA</h4>
+            <p class="mb-sm text-secondary">Your Google Drive data is used strictly for the purpose of identifying duplicate files and freeing up storage space on your behalf.</p>
+
+            <h4 class="mt-md mb-xs">4. DATA STORAGE AND SHARING (LOCAL ONLY)</h4>
+            <p class="mb-sm text-secondary">gdrive-dup is a strictly local application. All processing is done on your own device. We do not transmit, upload, or store your Google user data on any external servers. Your data is never shared with third parties.</p>
+
+            <h4 class="mt-md mb-xs">5. DATA RETENTION AND DELETION</h4>
+            <p class="mb-sm text-secondary">Because gdrive-dup is a strictly local application, we do not retain your Google user data on any external servers. File metadata is only temporarily held in your device's memory while the application is actively scanning and is cleared when the process completes or closes. Your OAuth authentication token is stored locally on your device. You can permanently delete this data at any time by removing the <code>token.json</code> file from the application directory. You may also revoke the application's access at any time through your Google Account Security settings.</p>
+
+            <h4 class="mt-md mb-xs">6. SECURITY AND DATA PROTECTION MECHANISMS</h4>
+            <p class="mb-sm text-secondary">We implement specific mechanisms to protect your sensitive data. <strong>In transit:</strong> All communication between gdrive-dup and Google Drive APIs is securely encrypted using HTTPS/TLS protocols. <strong>At rest:</strong> Your OAuth tokens are stored locally on your device, protected by your operating system's built-in file access controls. We strongly recommend keeping your device secure and utilizing full-disk encryption to further protect your locally stored data.</p>
+
+            <h4 class="mt-md mb-xs">7. CHANGES TO THIS PRIVACY POLICY</h4>
+            <p class="mb-sm text-secondary">We may update this Privacy Policy from time to time. If we make material changes to how we access, use, store, or share your Google user data, we will notify you by prominently posting a notice on our website and within the application before the changes take effect. We encourage you to periodically review this page for the latest information on our privacy practices.</p>
+
+            <h4 class="mt-md mb-xs">8. CONTACT US</h4>
+            <p class="mb-sm text-secondary">If you have any questions about this Privacy Policy, please contact us at jwtiyar@gmail.com.</p>
+            
+            <p class="mt-lg text-xs text-muted text-center">&copy; 2026 gdrive-dup. All rights reserved.</p>
+          </div>
+        </div>
+      </section>
 
       <!-- VIEW: DEDUPLICATOR -->
       <section id="view-dedup-content" class="view-pane">

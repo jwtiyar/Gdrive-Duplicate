@@ -73,21 +73,25 @@ function initNavigation() {
   const navDedup = document.getElementById('nav-dedup');
   const navSelective = document.getElementById('nav-selective');
   const navSettings = document.getElementById('nav-settings');
+  const navPrivacy = document.getElementById('nav-privacy');
   
   const viewTitle = document.getElementById('view-title');
   
   const paneDedup = document.getElementById('view-dedup-content');
   const paneSelective = document.getElementById('view-selective-content');
   const paneSettings = document.getElementById('view-settings-content');
+  const panePrivacy = document.getElementById('view-privacy-content');
 
-  const navItems = [navDedup, navSelective, navSettings];
-  const paneItems = [paneDedup, paneSelective, paneSettings];
+  const navItems = [navDedup, navSelective, navSettings, navPrivacy];
+  const paneItems = [paneDedup, paneSelective, paneSettings, panePrivacy];
 
   function switchView(activeNav, activePane, titleText) {
     navItems.forEach(item => item.classList.remove('active'));
     paneItems.forEach(pane => pane.classList.add('hidden'));
     
-    activeNav.classList.add('active');
+    if (activeNav) {
+      activeNav.classList.add('active');
+    }
     activePane.classList.remove('hidden');
     viewTitle.textContent = titleText;
     
@@ -107,11 +111,31 @@ function initNavigation() {
     renderSettingsView();
   });
 
+  navPrivacy.addEventListener('click', () => {
+    switchView(navPrivacy, panePrivacy, 'Privacy Policy');
+  });
+
   const btnSidebarSettings = document.getElementById('btn-sidebar-settings');
   if (btnSidebarSettings) {
     btnSidebarSettings.addEventListener('click', () => {
       switchView(navSettings, paneSettings, 'Settings & Status');
       renderSettingsView();
+    });
+  }
+
+  const linkSidebarPrivacy = document.getElementById('link-sidebar-privacy');
+  if (linkSidebarPrivacy) {
+    linkSidebarPrivacy.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchView(navPrivacy, panePrivacy, 'Privacy Policy');
+    });
+  }
+
+  const settingsPrivacyLink = document.getElementById('settings-privacy-link');
+  if (settingsPrivacyLink) {
+    settingsPrivacyLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchView(navPrivacy, panePrivacy, 'Privacy Policy');
     });
   }
 }
