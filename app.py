@@ -57,16 +57,32 @@ state_lock = threading.Lock()
 app = FastAPI(title="Google Drive Cleaner GUI", lifespan=_lifespan)
 
 # -- Origin check middleware (blocks external API calls) ---------------------
-ALLOWED_ORIGINS = {"http://127.0.0.1:8000", "http://localhost:8000"}
+ALLOWED_ORIGINS = {"http://127.0.0.1:8000", "http://localhost:8000", "http://127.0.0.1:8080", "http://localhost:8080"}
 
 @app.middleware("http")
 async def check_origin(request, call_next):
     if request.url.path.startswith("/api/"):
         origin = request.headers.get("origin", "")
         host = request.headers.get("host", "")
-        is_local = origin in ALLOWED_ORIGINS if origin else host in (
-            "127.0.0.1:8000", "localhost:8000"
-        )
+        
+        # Parse host from origin (e.g. http://localhost:8080 -> localhost:8080)
+        origin_host = ""
+        if origin:
+            if origin.startswith("http://"):
+                origin_host = origin[7:]
+            elif origin.startswith("https://"):
+                origin_host = origin[8:]
+        
+        # Request is local/same-origin if:
+        # 1. Host is localhost/127.0.0.1 (or similar)
+        # 2. Or the origin matches the host (same-origin request)
+        # 3. Or it's a direct request (no origin header, e.g. curl/postman)
+        is_local = False
+        if origin:
+            is_local = origin_host == host or origin in ALLOWED_ORIGINS
+        else:
+            is_local = True  # No Origin header means it's not a cross-origin browser request
+            
         if not is_local and request.method in ("POST", "PUT", "DELETE"):
             from fastapi.responses import JSONResponse
             return JSONResponse(status_code=403, content={"detail": "External API calls not allowed."})
@@ -393,7 +409,7 @@ def api_google_login():
         flow = InstalledAppFlow.from_client_secrets_file(
             gdrive_dedup.CREDS_FILE,
             scopes=gdrive_dedup.SCOPES,
-            redirect_uri="http://localhost:8000/callback"
+            redirect_uri="http://localhost:8080/callback"
         )
         auth_url, state = flow.authorization_url(prompt='consent', access_type='offline')
         clean_stale_oauth_flows()
@@ -541,8 +557,8 @@ def open_browser():
     # Poll until server is ready, then open browser
     for _ in range(30):
         try:
-            urllib.request.urlopen("http://127.0.0.1:8000")
-            webbrowser.open("http://127.0.0.1:8000")
+            urllib.request.urlopen("http://127.0.0.1:8080")
+            webbrowser.open("http://127.0.0.1:8080")
             return
         except Exception:
             time.sleep(0.5)
@@ -557,7 +573,7 @@ if __name__ == "__main__":
     
     print("\n" + "=" * 70)
     print("  Google Drive Cleaner GUI server is starting...")
-    print("  Open your browser and navigate to: http://127.0.0.1:8000")
+    print("  Open your browser and navigate to: http://127.0.0.1:8080")
     print("=" * 70 + "\n")
     
-    uvicorn.run("app:app", host="127.0.0.1", port=8000, log_level="info")
+    uvicorn.run("app:app", host="0.0.0.0", port=8080, log_level="info")

@@ -1,39 +1,71 @@
 # DriveCleaner
 
-A fast, unified tool to clean up your Google Drive. It can act as a **Deduplicator** or a **Selective Deleter** (searching by name/MIME type). Features a gorgeous, responsive web-based GUI and pre-compiled executables for ease of use.
+A fast, unified tool to clean up your Google Drive. It can act as a **Deduplicator** or a **Selective Deleter** (searching by name/MIME type). Features a gorgeous, responsive web-based GUI built on FastAPI and a zero-dependency vanilla JS/CSS frontend.
 
-## Setup & Execution
+This application runs **strictly locally** on your own machine. It accesses the Google Drive API directly using your own developer credentials, meaning no third party ever has access to your files or tokens.
 
-### Option 1: Use the Pre-compiled Executables (Recommended)
-You do not need Python installed! Simply download the latest release for your OS from the Releases page (built automatically via GitHub Actions & GitLab CI):
-- `DriveCleaner-Windows.exe` (Windows)
-- `DriveCleaner-Linux` (Linux Binary)
+---
 
-### Option 2: Run from Source
-This tool uses `uv` for fast dependency management.
+## Setup Guide
+
+### 1. Get Google API Credentials
+Because the app is run locally, you need to create your own Google Cloud project and API credentials to authenticate:
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a new project (e.g., `DriveCleaner`).
+3. In the sidebar, navigate to **APIs & Services** > **Library**, search for **Google Drive API**, and click **Enable**.
+4. Configure the **OAuth Consent Screen**:
+   - Choose **External** user type.
+   - Enter your email and basic app details.
+   - Under **Scopes**, click **Add or Remove Scopes** and add the `https://www.googleapis.com/auth/drive` scope (or `.../auth/drive.metadata.readonly` if you only want to scan without deleting).
+   - Add your own Google email address as a **Test User** (since the app is in Testing mode).
+5. Generate credentials:
+   - Navigate to **APIs & Services** > **Credentials**.
+   - Click **Create Credentials** > **OAuth Client ID**.
+   - Select **Desktop Application** as the application type, name it, and click **Create**.
+6. Download the JSON credentials file:
+   - Find your new Client ID under *OAuth 2.0 Client IDs* and click the **Download JSON** icon.
+   - Save this file as **`credentials.json`** in the root directory of this project.
+
+---
+
+### 2. Install & Run the Application
+
+This project uses `uv` for fast dependency and virtual environment management.
+
 1. Ensure you have [uv](https://github.com/astral-sh/uv) installed.
-2. Run the application:
+2. Start the application:
    ```bash
-   uv run uvicorn app:app --port 8000 --host 127.0.0.1
+   uv run python app.py
    ```
+   *(This will automatically set up the virtual environment, install dependencies, and start the FastAPI server.)*
+3. Open your browser and navigate to:
+   👉 **[http://localhost:8080](http://localhost:8080)**
 
-## Using the Application
+---
 
-1. **Get Google Credentials:**
-   Before running the app, you must generate an OAuth 2.0 Client ID for a Desktop Application in the Google Cloud Console. 
-   Download the file and save it as `credentials.json` in the same directory as the executable/script.
-2. **Launch & Authenticate:**
-   Open the application in your browser (usually `http://127.0.0.1:8000`).
-   Click **Connect Google Account** to authorize the app. A `token.json` will be saved locally so you stay logged in.
-3. **Clean Your Drive:**
-   - **Duplicate Finder:** Finds and groups exact duplicates by MD5 hash and file size. You can optionally toggle "Require Exact File Name Match" if you only want to group files that share the exact same filename. Use the "Select All" / "Deselect All" shortcuts to quickly manage hundreds of duplicates.
-    - **Selective Deleter:** Mass delete files by name, MIME type category (e.g., delete all `Images`, or all files containing `temp`), or file size boundaries (e.g., minimum/maximum size in MB).
-4. **Deletion Logs:**
-   Every deletion run (in both GUI and CLI modes) generates a local, timestamped log file (e.g., `deletion_history_20260602_153000.txt`) listing all successfully processed files, their Google Drive ID, and their sizes for safety and auditing.
+### 3. Authenticate & Clean
+1. On the application homepage under the **Settings & Status** tab, click **Connect Google Account**.
+2. A browser tab will open asking you to sign in with your Google account.
+3. Since your Google Cloud project is not verified, you will see a warning screen ("Google hasn't verified this app"). Click **Advanced** and then click **Go to [Project Name] (unsafe)** to proceed.
+4. Grant the requested Drive permissions.
+5. Once authorized, a **`token.json`** file will be saved locally in your project folder, and you can close the authentication tab and return to the dashboard to start scanning.
+6. *To log out or switch accounts, click **Disconnect Google Account** in the settings page to remove the local token.*
+
+---
+
+## Features & UI
+
+* **Duplicate Finder:** Groups duplicate files by exact MD5 checksum and file size. Toggles are available to require exact name matches.
+* **Selective Deleter:** Mass filters and deletes files by name patterns, file size boundaries (min/max MB), or MIME type categories (Images, Videos, Documents, Archives, Audio, etc.).
+* **Safe Deletions:** Supports moving files to the Google Drive Trash (recoverable) or purging them permanently.
+* **Local Deletion Logs:** Generates a local, timestamped log file (e.g., `deletion_history_20260624_120000.txt`) for auditing all operations.
+
+---
 
 ## CLI Usage (Command Line)
 
-The backend engine (`gdrive_dedup.py`) can also be run entirely headlessly from the terminal for automation purposes.
+The backend engine (`gdrive_dedup.py`) can also be run headlessly from the terminal:
 
 ```bash
 # Dry-run: Just print a report of duplicates and how much space you'll save
@@ -53,14 +85,9 @@ uv run python gdrive_dedup.py --min-size-mb 100 --max-size-mb 500 --delete
 ```
 
 ### CLI Flags
-- `--delete`: Move files to the Google Drive Trash.
-- `--purge`: Permanently purge files from your drive (Irreversible).
-- `--export-csv`: Generates a detailed CSV log of what was kept/deleted, including exact folder paths.
-- `--shared-drives`: Includes files inside Google Shared Drives during the scan.
-- `--min-size-mb`: Minimum file size in MB for selective filtering.
-- `--max-size-mb`: Maximum file size in MB for selective filtering.
-
-## Architecture Highlights
-- **Crash-Proof Engine**: Uses exponential backoff. If you have 500,000 files, it won't crash when Google rate-limits the API.
-- **Full Path Resolution**: Safely resolves nested directory structures so you know exactly which folder a duplicate lives in before deleting it.
-- **FastAPI Backend**: The app uses a fast async backend and serves a zero-dependency vanilla JS/CSS frontend.
+* `--delete`: Move files to the Google Drive Trash.
+* `--purge`: Permanently purge files from your drive (Irreversible).
+* `--export-csv`: Generates a detailed CSV log of what was kept/deleted, including exact folder paths.
+* `--shared-drives`: Includes files inside Google Shared Drives during the scan.
+* `--min-size-mb`: Minimum file size in MB for selective filtering.
+* `--max-size-mb`: Maximum file size in MB for selective filtering.
